@@ -4,25 +4,25 @@ from pydantic_settings import BaseSettings
 from pydantic import Field, field_validator
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "SprintIQ AI"
-    ENVIRONMENT: str = "development"
-    SECRET_KEY: str = "sprintiq-ai-super-secret-jwt-key-enterprise-grade-2026"
-    JWT_SECRET_KEY: str = "sprintiq-ai-super-secret-jwt-key-enterprise-grade-2026"
-    JWT_REFRESH_SECRET: str = "sprintiq-ai-super-secret-refresh-key-enterprise-grade-2026"
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 480  # 8 hours
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    PROJECT_NAME: str = os.getenv("PROJECT_NAME", "SprintIQ AI")
+    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+    
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "")
+    ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "480"))
+    REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "30"))
 
-    DATABASE_URL: str = "sqlite:///./sprintiq.db"
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "")
+    
     MYSQL_HOST: str = "localhost"
     MYSQL_PORT: int = 3306
     MYSQL_DATABASE: str = "sprintiq_db"
     MYSQL_USER: str = "root"
     MYSQL_PASSWORD: str = ""
 
-    SUPABASE_URL: str = ""
-    SUPABASE_SERVICE_ROLE_KEY: str = ""
-    SUPABASE_STORAGE_BUCKET: str = "sprintiq-attachments"
+    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
+    SUPABASE_SERVICE_ROLE_KEY: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+    SUPABASE_STORAGE_BUCKET: str = os.getenv("SUPABASE_STORAGE_BUCKET", "sprintiq-attachments")
 
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")

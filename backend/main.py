@@ -67,6 +67,26 @@ def health_check():
         "timestamp": datetime.utcnow()
     }
 
+@app.get("/api/health/db")
+def health_check_db():
+    db = SessionLocal()
+    try:
+        from sqlalchemy import text
+        db.execute(text("SELECT 1"))
+        return {
+            "status": "ok",
+            "database": "connected",
+            "timestamp": datetime.utcnow()
+        }
+    except Exception as e:
+        return JSONResponse(status_code=503, content={
+            "status": "error",
+            "database": "disconnected",
+            "detail": str(e) if settings.ENVIRONMENT == "development" else "Database unavailable"
+        })
+    finally:
+        db.close()
+
 def seed_database():
     """Initializes tables and seeds default roles, profiles, projects, sprints, and tasks."""
     Base.metadata.create_all(bind=engine)
