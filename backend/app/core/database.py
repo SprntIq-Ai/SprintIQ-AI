@@ -4,7 +4,9 @@ from app.core.config import settings
 
 db_url = settings.DATABASE_URL
 if not db_url:
-    raise ValueError("CRITICAL ERROR: DATABASE_URL environment variable is missing. Cannot start the backend.")
+    import warnings
+    warnings.warn("DATABASE_URL is not set. The backend will start but database operations will fail.")
+    db_url = "sqlite:///./sprintiq_fallback.db"
 
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)

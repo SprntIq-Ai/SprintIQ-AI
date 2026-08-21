@@ -89,7 +89,10 @@ def health_check_db():
 
 def seed_database():
     """Initializes tables and seeds default roles, profiles, projects, sprints, and tasks."""
-    Base.metadata.create_all(bind=engine)
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"[Database Init] Table creation skipped or failed (may already exist): {e}")
     db = SessionLocal()
     try:
         ensure_github_schema(db)

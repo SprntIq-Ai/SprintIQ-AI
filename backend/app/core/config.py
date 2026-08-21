@@ -4,36 +4,36 @@ from pydantic_settings import BaseSettings
 from pydantic import Field, field_validator
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = os.getenv("PROJECT_NAME", "SprintIQ AI")
-    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
-    
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "")
-    ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "480"))
-    REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "30"))
+    PROJECT_NAME: str = "SprintIQ AI"
+    ENVIRONMENT: str = "development"
 
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "")
-    
+    SECRET_KEY: str = ""
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+
+    DATABASE_URL: str = ""
+
     MYSQL_HOST: str = "localhost"
     MYSQL_PORT: int = 3306
     MYSQL_DATABASE: str = "sprintiq_db"
     MYSQL_USER: str = "root"
     MYSQL_PASSWORD: str = ""
 
-    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
-    SUPABASE_SERVICE_ROLE_KEY: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
-    SUPABASE_STORAGE_BUCKET: str = os.getenv("SUPABASE_STORAGE_BUCKET", "sprintiq-attachments")
+    SUPABASE_URL: str = ""
+    SUPABASE_SERVICE_ROLE_KEY: str = ""
+    SUPABASE_STORAGE_BUCKET: str = "sprintiq-attachments"
 
-    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-3.5-flash-lite"
 
     # Google OAuth (server-side only; never expose GOOGLE_CLIENT_SECRET to the frontend)
     # FRONTEND_URL is the public origin of the SPA. GOOGLE_REDIRECT_URI overrides the
     # default derived value; otherwise the callback URI is {FRONTEND_URL}/auth/google/callback.
-    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
-    GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
-    GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
-    GOOGLE_REDIRECT_URI: str = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:5173/auth/google/callback")
+    FRONTEND_URL: str = "http://localhost:5173"
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GOOGLE_REDIRECT_URI: str = "http://localhost:5173/auth/google/callback"
 
     GITHUB_CLIENT_ID: str = ""
     GITHUB_CLIENT_SECRET: str = ""
@@ -65,4 +65,3 @@ class Settings(BaseSettings):
         extra = "ignore"
 
 settings = Settings()
-
