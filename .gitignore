@@ -1,3 +1,7 @@
+.env
+.env.*
+!.env.example
+*.db
 node_modules/
 dist/
 build/
@@ -5,7 +9,3 @@ build/
 __pycache__/
 *.pyc
 *.log
-*.db
-.env
-.env.*
-!.env.example
