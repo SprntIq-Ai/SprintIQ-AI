@@ -1,0 +1,361 @@
+/* ============================================
+   SprintIQ AI — Centralized Theme System
+   Imports the single GLOBAL SprintIQ design
+   system and provides shared utility classes.
+   No role-specific themes — one visual identity.
+   ============================================ */
+
+@import './sprintiq.css';
+
+/* ---- SHARED THEME UTILITY CLASSES ---- */
+
+/* Role-aware page background (same as body) */
+.role-page-bg {
+  background-color: var(--role-page-bg, #020617);
+  background-image: var(--role-page-glow, none);
+  background-attachment: fixed;
+}
+
+/* Role-aware background fills */
+.role-bg-primary { background-color: var(--role-primary); }
+.role-bg-secondary { background-color: var(--role-secondary); }
+.role-bg-accent { background-color: var(--role-accent); }
+.role-bg-action { background-color: var(--role-action); }
+.role-bg-subtle { background-color: var(--role-bg-subtle); }
+.role-bg-muted { background-color: var(--role-bg-muted); }
+.role-bg-card { background-color: var(--role-bg-card); }
+
+/* Role-aware text colors */
+.role-text-primary { color: var(--role-primary); }
+.role-text-secondary { color: var(--role-secondary); }
+.role-text-accent { color: var(--role-accent); }
+.role-text-action { color: var(--role-action); }
+.role-text-heading { color: var(--role-text-heading); }
+.role-text-body { color: var(--role-text-body); }
+.role-text-muted { color: var(--role-text-muted); }
+
+/* Role-aware borders */
+.role-border { border-color: var(--role-border); }
+.role-border-subtle { border-color: var(--role-border-subtle); }
+
+/* Role-aware glow */
+.role-glow {
+  box-shadow: 0 0 20px var(--role-glow), 0 0 60px var(--role-glow-lg);
+}
+.role-glow-sm {
+  box-shadow: 0 0 10px var(--role-glow);
+}
+.role-glow-lg {
+  box-shadow: 0 0 40px var(--role-glow), 0 0 100px var(--role-glow-lg);
+}
+
+/* Role-aware card with border accent */
+.role-card {
+  background: var(--role-surface);
+  border: 1px solid var(--role-border-subtle);
+  border-radius: var(--role-radius-lg, 18px);
+  box-shadow: var(--role-shadow-sm);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.role-card:hover {
+  border-color: var(--role-border);
+  box-shadow: var(--role-shadow-lg);
+}
+
+/* Premium panel with optional header row */
+.role-panel {
+  background: var(--role-surface);
+  border: 1px solid var(--role-border-subtle);
+  border-radius: var(--role-radius-lg, 18px);
+  box-shadow: var(--role-shadow-sm);
+  overflow: hidden;
+}
+.role-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.125rem 1.25rem;
+  border-bottom: 1px solid var(--role-border-subtle);
+}
+.role-panel-body {
+  padding: 1.25rem;
+}
+
+/* Role-aware badge */
+.role-badge {
+  background-color: var(--role-badge-bg);
+  border: 1px solid var(--role-badge-border);
+  color: var(--role-badge-text);
+}
+
+/* Role-aware pill (small status/tag chips) */
+.role-pill {
+  display: inline-flex;
+  align-items: center;
+  background-color: var(--role-badge-bg);
+  border: 1px solid var(--role-badge-border);
+  color: var(--role-badge-text);
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.625rem;
+}
+
+/* Role-aware icon chip (icon inside a rounded container) */
+.role-icon-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--role-bg-subtle);
+  color: var(--role-primary);
+  border: 1px solid var(--role-border-subtle);
+}
+
+/* Role-aware accent text links */
+.role-link {
+  color: var(--role-secondary);
+  transition: color 0.2s ease;
+}
+.role-link:hover {
+  color: var(--role-primary);
+}
+
+/* SprintIQ gradient text (sky blue → strong sky → purple AI) */
+.role-text-gradient {
+  background-image: linear-gradient(90deg, var(--role-primary), var(--role-secondary), var(--role-ai));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Role-aware sidebar */
+.role-sidebar {
+  background: var(--role-sidebar-bg);
+  border-right: 1px solid var(--role-sidebar-border);
+}
+.role-sidebar-item {
+  color: var(--role-sidebar-text, #4B4766);
+  transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+.role-sidebar-item:hover {
+  color: var(--role-sidebar-heading, #1E1B2E);
+  background-color: var(--role-sidebar-hover);
+}
+.role-sidebar-item-active {
+  background-color: var(--role-sidebar-active-bg);
+  border-right: 4px solid var(--role-sidebar-active-border);
+  color: var(--role-sidebar-active-text);
+  font-weight: 600;
+}
+
+/* Role-aware primary button */
+.role-btn-primary {
+  background-color: var(--role-primary);
+  color: var(--role-btn-text, #ffffff);
+  box-shadow: 0 4px 14px rgba(var(--role-primary-rgb), 0.22);
+  border: 1px solid rgba(var(--role-primary-rgb), 0.25);
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+.role-btn-primary:hover {
+  background-color: var(--role-primary-hover, var(--role-primary));
+  filter: brightness(1.02);
+  box-shadow: 0 6px 20px rgba(var(--role-primary-rgb), 0.28);
+}
+
+/* Role-aware outline button */
+.role-btn-outline {
+  background: var(--role-surface);
+  color: var(--role-text-body);
+  border: 1px solid var(--role-border);
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+.role-btn-outline:hover {
+  border-color: var(--role-primary);
+  color: var(--role-primary);
+  background: var(--role-bg-subtle);
+}
+
+/* Role-aware ghost button */
+.role-btn-ghost {
+  background: transparent;
+  color: var(--role-text-muted);
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+.role-btn-ghost:hover {
+  background: var(--role-bg-subtle);
+  color: var(--role-text-heading);
+}
+
+/* Role-aware action button (for manager's distinct action color) */
+.role-btn-action {
+  background-color: var(--role-action);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(var(--role-action-rgb), 0.25);
+  border: 1px solid rgba(var(--role-action-rgb), 0.30);
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+.role-btn-action:hover {
+  filter: brightness(1.06);
+}
+
+/* Role-aware focus ring */
+.role-focus:focus,
+.role-focus:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--role-focus-ring);
+}
+
+/* Role-aware input focus */
+.role-input:focus {
+  border-color: var(--role-primary);
+  box-shadow: 0 0 0 3px var(--role-focus-ring);
+}
+
+/* Role-aware form field (inputs, selects, textareas) */
+.role-input {
+  background-color: var(--role-surface);
+  border: 1px solid var(--role-border);
+  color: var(--role-text-body);
+  transition: all 0.2s ease;
+}
+.role-input::placeholder {
+  color: var(--role-text-muted);
+}
+.role-input:hover {
+  border-color: var(--role-primary);
+}
+
+/* Role-aware table */
+.role-table {
+  width: 100%;
+  text-align: left;
+  font-size: 0.8rem;
+  color: var(--role-text-body);
+}
+.role-table thead tr {
+  border-bottom: 1px solid var(--role-border-subtle);
+  color: var(--role-text-muted);
+  text-transform: uppercase;
+  font-size: 0.65rem;
+  letter-spacing: 0.05em;
+}
+.role-table thead th {
+  padding: 0.75rem 1rem;
+  background-color: var(--role-bg-subtle);
+  font-weight: 700;
+}
+.role-table tbody tr {
+  border-bottom: 1px solid var(--role-border-subtle);
+}
+.role-table tbody tr:hover {
+  background-color: var(--role-bg-subtle);
+}
+.role-table tbody td {
+  padding: 0.75rem 1rem;
+}
+
+/* Role-aware tab / segmented control active state */
+.role-tab-active {
+  background-color: var(--role-primary);
+  color: var(--role-btn-text, #ffffff);
+}
+.role-tab-inactive {
+  color: var(--role-text-muted);
+}
+.role-tab-inactive:hover {
+  color: var(--role-text-heading);
+}
+
+/* Role-aware progress bar */
+.role-progress-bar {
+  background-color: var(--role-primary);
+  border-radius: 9999px;
+  transition: width 0.5s ease;
+}
+.role-progress-track {
+  background-color: rgba(var(--role-primary-rgb), 0.15);
+  border-radius: 9999px;
+}
+
+/* Unified selection on themed containers */
+.sprintiq-theme ::selection,
+.admin-theme ::selection,
+.manager-theme ::selection,
+.developer-theme ::selection { background-color: var(--role-selection-bg); color: var(--role-selection-text); }
+
+/* Unified scrollbar overrides */
+.sprintiq-theme ::-webkit-scrollbar-thumb,
+.admin-theme ::-webkit-scrollbar-thumb,
+.manager-theme ::-webkit-scrollbar-thumb,
+.developer-theme ::-webkit-scrollbar-thumb { background: var(--role-scrollbar-thumb); }
+.sprintiq-theme ::-webkit-scrollbar-thumb:hover,
+.admin-theme ::-webkit-scrollbar-thumb:hover,
+.manager-theme ::-webkit-scrollbar-thumb:hover,
+.developer-theme ::-webkit-scrollbar-thumb:hover { background: var(--role-scrollbar-thumb-hover); }
+
+/* Role-aware login page glow orb */
+.role-login-glow {
+  background: var(--role-login-glow);
+}
+
+/* Role-aware skeleton loader */
+@keyframes role-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.role-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(var(--role-primary-rgb), 0.05) 25%,
+    rgba(var(--role-primary-rgb), 0.12) 50%,
+    rgba(var(--role-primary-rgb), 0.05) 75%
+  );
+  background-size: 200% 100%;
+  animation: role-shimmer 1.5s ease-in-out infinite;
+  border-radius: 0.5rem;
+}
+
+/* Role-aware tooltip */
+.role-tooltip {
+  background: var(--role-surface);
+  border: 1px solid var(--role-border);
+  border-radius: 0.75rem;
+  color: var(--role-text-body);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+}
+
+/* Chart tooltip override */
+.role-chart-tooltip {
+  background: var(--role-surface) !important;
+  border-color: var(--role-border) !important;
+  border-radius: 12px !important;
+  color: var(--role-text-body) !important;
+}
+
+/* Animated border gradient (optional accent) */
+.role-border-glow {
+  position: relative;
+}
+.role-border-glow::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, var(--role-primary), var(--role-accent));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.4;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.role-border-glow:hover::after {
+  opacity: 0.7;
+}

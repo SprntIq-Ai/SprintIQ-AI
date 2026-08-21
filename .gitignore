@@ -1,0 +1,11 @@
+node_modules/
+dist/
+build/
+.vite/
+__pycache__/
+*.pyc
+*.log
+*.db
+.env
+.env.*
+!.env.example

@@ -1,0 +1,67 @@
+﻿\src\App.tsx:110 - App (used in module)
+\src\config\constants.ts:27 - ROLE_THEMES
+\src\contexts\ThemeContext.tsx:12 - SPRINTIQ_THEME_CLASS (used in module)
+\src\contexts\ThemeContext.tsx:15 - GLOBAL_CHART_COLORS (used in module)
+\src\contexts\ThemeContext.tsx:24 - RoleThemeTokens (used in module)
+\src\contexts\ThemeContext.tsx:94 - ROLE_THEME_MAP (used in module)
+\src\contexts\ThemeContext.tsx:146 - useTheme (used in module)
+\src\services\api.ts:50 - default
+\src\services\api.ts:174 - publicService
+\src\services\intelligenceService.ts:5 - getAuthHeaders (used in module)
+\src\types\index.ts:1 - RoleType (used in module)
+\src\types\index.ts:3 - User
+\src\types\index.ts:13 - Project
+\src\types\index.ts:32 - Sprint
+\src\types\index.ts:43 - TaskStatus (used in module)
+\src\types\index.ts:44 - TaskPriority (used in module)
+\src\types\index.ts:46 - TaskAttachment (used in module)
+\src\types\index.ts:55 - Comment
+\src\types\index.ts:64 - Task
+\src\types\index.ts:91 - NotificationItem
+\src\types\index.ts:101 - AIAnalysis
+\src\types\index.ts:109 - ProjectInvitation
+\src\types\index.ts:122 - ProjectMember
+\src\types\index.ts:132 - AvailableDeveloper
+\src\types\index.ts:141 - ProjectHealthData
+\src\types\index.ts:153 - AISprintPlan
+\src\types\index.ts:168 - AITaskDetails
+\src\types\index.ts:179 - AIDailyStandup
+\src\types\index.ts:188 - AIWeeklyReport
+\src\types\index.ts:199 - AIRiskPrediction
+\src\types\index.ts:208 - AIMeetingMinutes
+\src\types\index.ts:222 - FocusSession
+\src\types\index.ts:233 - DeveloperBadge
+\src\types\index.ts:243 - LeaderboardItem
+\src\types\index.ts:255 - WorkloadHeatmapItem
+\src\types\index.ts:265 - TeamVelocity
+\src\types\index.ts:282 - GlobalSearchResult
+\src\types\index.ts:291 - GitHubSyncStatus (used in module)
+\src\types\index.ts:293 - GitHubRepoInfo (used in module)
+\src\types\index.ts:302 - GitHubProjectInfo
+\src\types\index.ts:310 - GitHubRepositoryRow (used in module)
+\src\types\index.ts:339 - GitHubActivityPoint (used in module)
+\src\types\index.ts:344 - GitHubContributorStat (used in module)
+\src\types\index.ts:352 - GitHubLiveStatus (used in module)
+\src\types\index.ts:354 - GitHubLiveCommit (used in module)
+\src\types\index.ts:367 - GitHubLiveRepository (used in module)
+\src\types\index.ts:392 - GitHubLiveBranch (used in module)
+\src\types\index.ts:397 - GitHubLivePullRequest (used in module)
+\src\types\index.ts:414 - GitHubLiveIssue (used in module)
+\src\types\index.ts:428 - GitHubLiveMetrics (used in module)
+\src\types\index.ts:441 - GitHubLiveActivity
+\src\types\index.ts:457 - GitHubLiveCommitsPage
+\src\types\index.ts:469 - GitHubPullRequestMetrics (used in module)
+\src\types\index.ts:478 - GitHubReviewMetrics (used in module)
+\src\types\index.ts:487 - GitHubIssueMetrics (used in module)
+\src\types\index.ts:494 - GitHubCommitMetrics (used in module)
+\src\types\index.ts:500 - GitHubContributorMetrics (used in module)
+\src\types\index.ts:505 - GitHubBranchMetrics (used in module)
+\src\types\index.ts:510 - GitHubMetricSection (used in module)
+\src\types\index.ts:519 - GitHubComparisonItem (used in module)
+\src\types\index.ts:533 - GitHubSummary (used in module)
+\src\types\index.ts:551 - GitHubDateRange (used in module)
+\src\types\index.ts:557 - GitHubCentralAnalytics
+\src\types\index.ts:571 - GitHubRepositoryDetailResponse
+\src\types\index.ts:579 - GitHubPeriodFilter
+\src\components\common\AIInsightCard.tsx:4 - InsightSeverity (used in module)
+\src\components\common\SearchableSelect.tsx:4 - SearchableSelectOption (used in module)
