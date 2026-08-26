@@ -89,7 +89,7 @@ def system_health_check(db: Session = Depends(get_db), current_user: Profile = D
         db.execute(text("SELECT 1"))
         results["database"] = HealthCheckResponse(
             status="ONLINE",
-            message="Supabase PostgreSQL database is connected and responding.",
+            message="Railway PostgreSQL database is connected and responding.",
             details={"engine": "PostgreSQL", "connection": "Active"}
         )
     except Exception as e:

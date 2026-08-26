@@ -13,7 +13,7 @@ class MLPredictor:
     def predict_project_delay(self, db: Session, project_id: str) -> dict:
         """
         Runs Scikit-learn prediction for project delay risk using real project execution features.
-        Stores the output prediction record in MySQL.
+        Stores the output prediction record in PostgreSQL.
         """
         project = db.query(Project).filter(Project.id == project_id).first()
         if not project:

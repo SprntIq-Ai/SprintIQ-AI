@@ -14,16 +14,6 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str = ""
 
-    MYSQL_HOST: str = "localhost"
-    MYSQL_PORT: int = 3306
-    MYSQL_DATABASE: str = "sprintiq_db"
-    MYSQL_USER: str = "root"
-    MYSQL_PASSWORD: str = ""
-
-    SUPABASE_URL: str = ""
-    SUPABASE_SERVICE_ROLE_KEY: str = ""
-    SUPABASE_STORAGE_BUCKET: str = "sprintiq-attachments"
-
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-3.5-flash-lite"
 

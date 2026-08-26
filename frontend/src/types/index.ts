@@ -593,3 +593,82 @@ export interface GitHubPeriodFilter {
   label: string;
   value: string;
 }
+
+// Developer Project Types
+export interface DeveloperProject {
+  id: string;
+  key: string;
+  name: string;
+  description?: string;
+  status: string;
+  manager_id?: string;
+  manager_name?: string;
+  created_at: string;
+  total_tasks: number;
+  completed_tasks: number;
+  in_progress_tasks: number;
+  review_pending_tasks: number;
+  progress_percentage: number;
+}
+
+export interface DeveloperProjectTask {
+  id: string;
+  title: string;
+  description?: string;
+  priority: TaskPriority;
+  status: TaskStatus;
+  progress: number;
+  sprint_id?: string;
+  sprint_name?: string;
+  story_points: number;
+  estimated_hours: number;
+  start_date?: string;
+  due_date?: string;
+  submitted_at?: string;
+  reviewed_at?: string;
+  review_comment?: string;
+}
+
+export interface DeveloperProjectSprint {
+  id: string;
+  name: string;
+  status: string;
+  start_date: string;
+  end_date: string;
+  goal?: string;
+}
+
+export interface DeveloperProjectTeamMember {
+  id: string;
+  full_name: string;
+  email: string;
+  role_in_project: string;
+}
+
+export interface DeveloperProjectSummary {
+  assigned_task_count: number;
+  completed_task_count: number;
+  in_progress_task_count: number;
+  review_pending_task_count: number;
+  overall_progress: number;
+}
+
+export interface DeveloperProjectDetail {
+  project: {
+    id: string;
+    key: string;
+    name: string;
+    description?: string;
+    status: string;
+    manager_id?: string;
+    manager_name?: string;
+    start_date?: string;
+    target_date?: string;
+    created_at: string;
+  };
+  developer_summary: DeveloperProjectSummary;
+  tasks: DeveloperProjectTask[];
+  sprints: DeveloperProjectSprint[];
+  team: DeveloperProjectTeamMember[];
+}
+

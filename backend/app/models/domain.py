@@ -13,7 +13,7 @@ def generate_uuid():
 class Role(Base):
     __tablename__ = "roles"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
     name = Column(String(50), unique=True, nullable=False) # admin, manager, developer
     description = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -23,13 +23,13 @@ class Role(Base):
 class Profile(Base):
     __tablename__ = "profiles"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
     email = Column(String(255), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
     full_name = Column(String(255), nullable=False)
     phone = Column(String(50), nullable=True)
     avatar_url = Column(Text, nullable=True)
-    role_id = Column(String(36), ForeignKey("roles.id", ondelete="CASCADE"), nullable=False)
+    role_id = Column(UUID(as_uuid=False), ForeignKey("roles.id", ondelete="CASCADE"), nullable=False)
     status = Column(String(50), default="ACTIVE") # ACTIVE, INACTIVE, PENDING
     bio = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -44,15 +44,15 @@ class Profile(Base):
 class Project(Base):
     __tablename__ = "projects"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=generate_uuid)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String(255), nullable=False)
     key = Column(String(20), unique=True, nullable=False)
     description = Column(Text, nullable=True)
     status = Column(String(50), default="PLANNING") # PLANNING, ACTIVE, COMPLETED, ARCHIVED
     start_date = Column(Date, nullable=True)
     target_date = Column(Date, nullable=True)
-    created_by = Column(String(36), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
-    manager_id = Column(String(36), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
+    created_by = Column(UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
+    manager_id = Column(UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
     ai_risk_score = Column(Float, default=0.0)
     health_status = Column(String(50), default="HEALTHY") # HEALTHY, AT_RISK, CRITICAL
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -67,9 +67,9 @@ class Project(Base):
 class ProjectMember(Base):
     __tablename__ = "project_members"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
     project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
-    user_id = Column(String(36), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
     role_in_project = Column(String(50), nullable=False) # MANAGER, DEVELOPER
     team = Column(String(100), nullable=True)
     joined_at = Column(DateTime, default=datetime.utcnow)
@@ -80,7 +80,7 @@ class ProjectMember(Base):
 class ProjectInvitation(Base):
     __tablename__ = "project_invitations"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
     email = Column(String(255), nullable=False)
     full_name = Column(String(255), nullable=True)
     phone = Column(String(50), nullable=True)
@@ -89,14 +89,14 @@ class ProjectInvitation(Base):
     team = Column(String(100), nullable=True)
     token = Column(String(255), unique=True, nullable=False)
     status = Column(String(50), default="PENDING") # PENDING, ACCEPTED, EXPIRED, CANCELLED
-    invited_by = Column(String(36), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
+    invited_by = Column(UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
     expires_at = Column(DateTime, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class Sprint(Base):
     __tablename__ = "sprints"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
     project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
     name = Column(String(255), nullable=False)
     goal = Column(Text, nullable=True)
@@ -112,25 +112,25 @@ class Sprint(Base):
 class Task(Base):
     __tablename__ = "tasks"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     priority = Column(String(50), default="MEDIUM") # LOW, MEDIUM, HIGH, URGENT
     status = Column(String(50), default="NOT_STARTED") # NOT_STARTED, IN_PROGRESS, TESTING, COMPLETED, REVIEW_PENDING, REJECTED
     progress = Column(Integer, default=0) # 0 - 100
-    sprint_id = Column(String(36), ForeignKey("sprints.id", ondelete="SET NULL"), nullable=True)
+    sprint_id = Column(UUID(as_uuid=False), ForeignKey("sprints.id", ondelete="SET NULL"), nullable=True)
     project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
     estimated_hours = Column(Float, default=0.0)
     story_points = Column(Integer, default=1)
     start_date = Column(Date, nullable=True)
     due_date = Column(Date, nullable=True)
-    assigned_developer_id = Column(String(36), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
-    created_by = Column(String(36), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
+    assigned_developer_id = Column(UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
+    created_by = Column(UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     # Task review lifecycle (developer -> manager approval)
     submitted_at = Column(DateTime, nullable=True)
-    reviewed_by = Column(String(36), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
+    reviewed_by = Column(UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
     reviewed_at = Column(DateTime, nullable=True)
     review_comment = Column(Text, nullable=True)
 
@@ -145,13 +145,13 @@ class Task(Base):
 class TaskAttachment(Base):
     __tablename__ = "task_attachments"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
-    task_id = Column(String(36), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
+    task_id = Column(UUID(as_uuid=False), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
     file_name = Column(String(255), nullable=False)
     file_url = Column(Text, nullable=False)
     file_type = Column(String(100), nullable=True)
     file_size = Column(Integer, nullable=True)
-    uploaded_by = Column(String(36), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
+    uploaded_by = Column(UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
     uploaded_at = Column(DateTime, default=datetime.utcnow)
 
     task = relationship("Task", back_populates="attachments")
@@ -159,12 +159,12 @@ class TaskAttachment(Base):
 class TaskProgress(Base):
     __tablename__ = "task_progress"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
-    task_id = Column(String(36), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
+    task_id = Column(UUID(as_uuid=False), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
     progress_percentage = Column(Integer, nullable=False)
     status = Column(String(50), nullable=False)
     notes = Column(Text, nullable=True)
-    updated_by = Column(String(36), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
+    updated_by = Column(UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     task = relationship("Task", back_populates="progress_history")
@@ -172,9 +172,9 @@ class TaskProgress(Base):
 class Comment(Base):
     __tablename__ = "comments"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
-    task_id = Column(String(36), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
-    author_id = Column(String(36), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
+    task_id = Column(UUID(as_uuid=False), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    author_id = Column(UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
     content = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -185,8 +185,8 @@ class Comment(Base):
 class Notification(Base):
     __tablename__ = "notifications"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
-    user_id = Column(String(36), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
+    user_id = Column(UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
     title = Column(String(255), nullable=False)
     message = Column(Text, nullable=False)
     type = Column(String(50), default="INFO")
@@ -197,22 +197,22 @@ class Notification(Base):
 class ActivityLog(Base):
     __tablename__ = "activity_logs"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
-    user_id = Column(String(36), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
+    user_id = Column(UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
     action = Column(String(255), nullable=False)
     entity_type = Column(String(100), nullable=False)
-    entity_id = Column(String(36), nullable=True)
+    entity_id = Column(UUID(as_uuid=False), nullable=True)
     details = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class Report(Base):
     __tablename__ = "reports"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
     title = Column(String(255), nullable=False)
     report_type = Column(String(100), nullable=False)
     format = Column(String(20), nullable=False)
-    generated_by = Column(String(36), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
+    generated_by = Column(UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
     file_url = Column(Text, nullable=True)
     meta_data = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -220,8 +220,8 @@ class Report(Base):
 class AIHistory(Base):
     __tablename__ = "ai_history"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
-    user_id = Column(String(36), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
+    user_id = Column(UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
     prompt = Column(Text, nullable=False)
     response = Column(Text, nullable=False)
     feature_type = Column(String(100), nullable=False)
@@ -231,7 +231,7 @@ class AIHistory(Base):
 class EmailLog(Base):
     __tablename__ = "email_logs"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
     recipient = Column(String(255), nullable=False)
     subject = Column(String(255), nullable=False)
     body = Column(Text, nullable=False)
@@ -241,7 +241,7 @@ class EmailLog(Base):
 class ProjectHealth(Base):
     __tablename__ = "project_health"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
     project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
     health_score = Column(Integer, nullable=False)
     health_status = Column(String(50), nullable=False) # Excellent, Good, Needs Attention, Critical
@@ -257,8 +257,8 @@ class ProjectHealth(Base):
 class DeveloperBadge(Base):
     __tablename__ = "developer_badges"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
-    developer_id = Column(String(36), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
+    developer_id = Column(UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
     badge_type = Column(String(100), nullable=False)
     badge_title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
@@ -268,8 +268,8 @@ class DeveloperBadge(Base):
 class Leaderboard(Base):
     __tablename__ = "leaderboard"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
-    developer_id = Column(String(36), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
+    developer_id = Column(UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
     period = Column(String(50), default="WEEKLY")
     completed_tasks = Column(Integer, default=0)
     story_points = Column(Integer, default=0)
@@ -282,21 +282,21 @@ class Leaderboard(Base):
 class MeetingMinutes(Base):
     __tablename__ = "meeting_minutes"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
     project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=True)
     title = Column(String(255), nullable=False)
     summary = Column(Text, nullable=False)
     discussion_points = Column(JSON, nullable=True)
     action_items = Column(JSON, nullable=True)
-    created_by = Column(String(36), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
+    created_by = Column(UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class FocusSession(Base):
     __tablename__ = "focus_sessions"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
-    developer_id = Column(String(36), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
-    task_id = Column(String(36), ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
+    developer_id = Column(UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
+    task_id = Column(UUID(as_uuid=False), ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True)
     duration_minutes = Column(Integer, nullable=False)
     status = Column(String(50), default="COMPLETED")
     notes = Column(Text, nullable=True)
@@ -306,7 +306,7 @@ class FocusSession(Base):
 class RiskPrediction(Base):
     __tablename__ = "risk_predictions"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
     project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
     sprint_delay_probability = Column(Float, default=0.0)
     project_delay_risk = Column(String(50), default="LOW")
@@ -319,19 +319,19 @@ class RiskPrediction(Base):
 class AIReport(Base):
     __tablename__ = "ai_reports"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
     project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=True)
     report_type = Column(String(100), nullable=False) # DAILY_STANDUP, WEEKLY_REPORT
     content = Column(JSON, nullable=False)
-    generated_by = Column(String(36), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
+    generated_by = Column(UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class TeamVelocity(Base):
     __tablename__ = "team_velocity"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
     project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
-    sprint_id = Column(String(36), ForeignKey("sprints.id", ondelete="SET NULL"), nullable=True)
+    sprint_id = Column(UUID(as_uuid=False), ForeignKey("sprints.id", ondelete="SET NULL"), nullable=True)
     sprint_velocity = Column(Integer, default=0)
     average_story_points = Column(Float, default=0.0)
     completed_story_points = Column(Integer, default=0)
@@ -341,8 +341,8 @@ class TeamVelocity(Base):
 class WorkloadHistory(Base):
     __tablename__ = "workload_history"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
-    developer_id = Column(String(36), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
+    developer_id = Column(UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
     assigned_tasks = Column(Integer, default=0)
     estimated_hours = Column(Float, default=0.0)
     completed_hours = Column(Float, default=0.0)
@@ -353,9 +353,9 @@ class WorkloadHistory(Base):
 class ActivityTimeline(Base):
     __tablename__ = "activity_timeline"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
     project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=True)
-    user_id = Column(String(36), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
+    user_id = Column(UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
     event_type = Column(String(100), nullable=False)
     description = Column(Text, nullable=False)
     metadata_json = Column("metadata", JSON, nullable=True)
@@ -365,7 +365,7 @@ class ActivityTimeline(Base):
 class MLPrediction(Base):
     __tablename__ = "ml_predictions"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
     project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
     model_name = Column(String(100), nullable=False) # ProjectDelayClassifier, WorkloadRiskRegressor
     model_version = Column(String(50), nullable=False, default="v1.0.0")
@@ -379,7 +379,7 @@ class MLPrediction(Base):
 class MLModelVersion(Base):
     __tablename__ = "ml_model_versions"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
     model_name = Column(String(100), nullable=False)
     version = Column(String(50), nullable=False)
     accuracy_score = Column(Float, default=0.85)
@@ -391,7 +391,7 @@ class MLModelVersion(Base):
 class MLTrainingRun(Base):
     __tablename__ = "ml_training_runs"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
     model_name = Column(String(100), nullable=False)
     training_sample_count = Column(Integer, default=0)
     metrics_summary = Column(JSON, nullable=True)
@@ -402,20 +402,20 @@ class MLTrainingRun(Base):
 class AIInsight(Base):
     __tablename__ = "ai_insights"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
     project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
     insight_type = Column(String(100), nullable=False) # PROJECT_EXPLANATION, BOTTLENECK_ANALYSIS, HEALTH_SUMMARY
     summary = Column(Text, nullable=False)
     detailed_explanation = Column(Text, nullable=True)
     impact_level = Column(String(50), default="MEDIUM")
     suggested_actions = Column(JSON, nullable=True)
-    created_by = Column(String(36), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
+    created_by = Column(UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class AIRecommendation(Base):
     __tablename__ = "ai_recommendations"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
     project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
     recommendation_category = Column(String(100), nullable=False) # DEVELOPER_ASSIGNMENT, CAPACITY_PLANNING, BOTTLENECK
     title = Column(String(255), nullable=False)
@@ -428,8 +428,8 @@ class AIRecommendation(Base):
 class GitHubConnection(Base):
     __tablename__ = "github_connections"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
-    user_id = Column(String(36), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False, index=True)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
+    user_id = Column(UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False, index=True)
     github_username = Column(String(255), nullable=False)
     access_token_encrypted = Column(Text, nullable=False) # Never sent to frontend
     scope = Column(String(255), nullable=True)
@@ -439,7 +439,7 @@ class GitHubConnection(Base):
 class GitHubRepository(Base):
     __tablename__ = "github_repositories"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
     project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
     github_repository_id = Column(String(100), nullable=True)  # Real GitHub API repository id
     repo_name = Column(String(255), nullable=False)
@@ -457,7 +457,7 @@ class GitHubRepository(Base):
     open_issues_count = Column(Integer, default=0)
     sync_status = Column(String(50), default="NOT_CONNECTED") # NOT_CONNECTED, SYNCING, SYNCED, FAILED
     last_sync_error = Column(Text, nullable=True)
-    added_by = Column(String(36), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
+    added_by = Column(UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
     last_synced_at = Column(DateTime, default=datetime.utcnow)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -472,8 +472,8 @@ class GitHubRepository(Base):
 class GitHubCommit(Base):
     __tablename__ = "github_commits"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
-    repository_id = Column(String(36), ForeignKey("github_repositories.id", ondelete="CASCADE"), nullable=False, index=True)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
+    repository_id = Column(UUID(as_uuid=False), ForeignKey("github_repositories.id", ondelete="CASCADE"), nullable=False, index=True)
     commit_sha = Column(String(100), nullable=False)
     message = Column(Text, nullable=False)
     author_name = Column(String(255), nullable=True)
@@ -485,8 +485,8 @@ class GitHubCommit(Base):
 class GitHubPullRequest(Base):
     __tablename__ = "github_pull_requests"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
-    repository_id = Column(String(36), ForeignKey("github_repositories.id", ondelete="CASCADE"), nullable=False, index=True)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
+    repository_id = Column(UUID(as_uuid=False), ForeignKey("github_repositories.id", ondelete="CASCADE"), nullable=False, index=True)
     pr_number = Column(Integer, nullable=False)
     title = Column(String(255), nullable=False)
     state = Column(String(50), nullable=False) # open, closed, merged
@@ -502,8 +502,8 @@ class GitHubPullRequest(Base):
 class GitHubReview(Base):
     __tablename__ = "github_reviews"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
-    pr_id = Column(String(36), ForeignKey("github_pull_requests.id", ondelete="CASCADE"), nullable=False)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
+    pr_id = Column(UUID(as_uuid=False), ForeignKey("github_pull_requests.id", ondelete="CASCADE"), nullable=False)
     reviewer_username = Column(String(255), nullable=False)
     state = Column(String(50), nullable=False) # APPROVED, CHANGES_REQUESTED, COMMENTED
     submitted_at = Column(DateTime, default=datetime.utcnow)
@@ -513,8 +513,8 @@ class GitHubReview(Base):
 class GitHubIssue(Base):
     __tablename__ = "github_issues"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
-    repository_id = Column(String(36), ForeignKey("github_repositories.id", ondelete="CASCADE"), nullable=False)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
+    repository_id = Column(UUID(as_uuid=False), ForeignKey("github_repositories.id", ondelete="CASCADE"), nullable=False)
     issue_number = Column(Integer, nullable=False)
     title = Column(String(255), nullable=False)
     state = Column(String(50), nullable=False) # open, closed
@@ -527,8 +527,8 @@ class GitHubIssue(Base):
 class GitHubContributor(Base):
     __tablename__ = "github_contributors"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
-    repository_id = Column(String(36), ForeignKey("github_repositories.id", ondelete="CASCADE"), nullable=False)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
+    repository_id = Column(UUID(as_uuid=False), ForeignKey("github_repositories.id", ondelete="CASCADE"), nullable=False)
     username = Column(String(255), nullable=False)
     commits_count = Column(Integer, default=0)
     prs_count = Column(Integer, default=0)
@@ -539,8 +539,8 @@ class GitHubContributor(Base):
 class GitHubBranch(Base):
     __tablename__ = "github_branches"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
-    repository_id = Column(String(36), ForeignKey("github_repositories.id", ondelete="CASCADE"), nullable=False, index=True)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
+    repository_id = Column(UUID(as_uuid=False), ForeignKey("github_repositories.id", ondelete="CASCADE"), nullable=False, index=True)
     branch_name = Column(String(255), nullable=False)
     is_default = Column(Boolean, default=False)
     last_commit_at = Column(DateTime, nullable=True)
@@ -552,7 +552,7 @@ class GitHubBranch(Base):
 class EngineeringMetrics(Base):
     __tablename__ = "engineering_metrics"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
     project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
     pr_cycle_time_avg_hours = Column(Float, default=0.0)
     pr_review_time_avg_hours = Column(Float, default=0.0)
@@ -567,8 +567,8 @@ class EngineeringMetrics(Base):
 class DeveloperMetrics(Base):
     __tablename__ = "developer_metrics"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
-    developer_id = Column(String(36), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False, index=True)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
+    developer_id = Column(UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False, index=True)
     project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=True)
     assigned_tasks_count = Column(Integer, default=0)
     completed_tasks_count = Column(Integer, default=0)
@@ -582,8 +582,8 @@ class DeveloperMetrics(Base):
 class SprintMetrics(Base):
     __tablename__ = "sprint_metrics"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
-    sprint_id = Column(String(36), ForeignKey("sprints.id", ondelete="CASCADE"), nullable=False, index=True)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
+    sprint_id = Column(UUID(as_uuid=False), ForeignKey("sprints.id", ondelete="CASCADE"), nullable=False, index=True)
     planned_story_points = Column(Integer, default=0)
     completed_story_points = Column(Integer, default=0)
     velocity_score = Column(Float, default=0.0)
@@ -594,8 +594,8 @@ class SprintMetrics(Base):
 class SprintRetrospective(Base):
     __tablename__ = "sprint_retrospectives"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
-    sprint_id = Column(String(36), ForeignKey("sprints.id", ondelete="CASCADE"), nullable=False, index=True)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
+    sprint_id = Column(UUID(as_uuid=False), ForeignKey("sprints.id", ondelete="CASCADE"), nullable=False, index=True)
     project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
     what_went_well = Column(JSON, nullable=True)
     what_did_not_go_well = Column(JSON, nullable=True)
@@ -604,16 +604,16 @@ class SprintRetrospective(Base):
     root_causes = Column(JSON, nullable=True)
     recommendations_next_sprint = Column(JSON, nullable=True)
     is_approved_by_manager = Column(Boolean, default=False)
-    created_by = Column(String(36), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
+    created_by = Column(UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class RetrospectiveActionItem(Base):
     __tablename__ = "retrospective_action_items"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
-    retrospective_id = Column(String(36), ForeignKey("sprint_retrospectives.id", ondelete="CASCADE"), nullable=False)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
+    retrospective_id = Column(UUID(as_uuid=False), ForeignKey("sprint_retrospectives.id", ondelete="CASCADE"), nullable=False)
     action_text = Column(Text, nullable=False)
-    assignee_id = Column(String(36), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
+    assignee_id = Column(UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
     status = Column(String(50), default="PENDING") # PENDING, IN_PROGRESS, COMPLETED
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -621,18 +621,18 @@ class RetrospectiveActionItem(Base):
 class ProjectSimulation(Base):
     __tablename__ = "project_simulations"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
     project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
     scenario_type = Column(String(100), nullable=False) # DEV_UNAVAILABLE, ADD_DEV, REMOVE_TASKS, MOVE_DEADLINE
     parameters = Column(JSON, nullable=False)
-    created_by = Column(String(36), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
+    created_by = Column(UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class SimulationResult(Base):
     __tablename__ = "simulation_results"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
-    simulation_id = Column(String(36), ForeignKey("project_simulations.id", ondelete="CASCADE"), nullable=False)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
+    simulation_id = Column(UUID(as_uuid=False), ForeignKey("project_simulations.id", ondelete="CASCADE"), nullable=False)
     baseline_completion_date = Column(Date, nullable=True)
     simulated_completion_date = Column(Date, nullable=True)
     expected_delay_days = Column(Integer, default=0)
@@ -645,7 +645,7 @@ class SimulationResult(Base):
 class ReleaseReadiness(Base):
     __tablename__ = "release_readiness"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
     project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
     readiness_score = Column(Integer, nullable=False, default=0) # 0 - 100
     status = Column(String(50), nullable=False, default="NEEDS_REVIEW") # READY, READY_WITH_WARNINGS, NOT_READY
@@ -661,8 +661,8 @@ class ReleaseReadiness(Base):
 class ReleaseCheck(Base):
     __tablename__ = "release_checks"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
-    release_readiness_id = Column(String(36), ForeignKey("release_readiness.id", ondelete="CASCADE"), nullable=False)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
+    release_readiness_id = Column(UUID(as_uuid=False), ForeignKey("release_readiness.id", ondelete="CASCADE"), nullable=False)
     category = Column(String(100), nullable=False) # TASKS, BUGS, REVIEWS, TESTING, DOCS
     check_name = Column(String(255), nullable=False)
     passed = Column(Boolean, default=True)
@@ -671,12 +671,12 @@ class ReleaseCheck(Base):
 class SystemSetting(Base):
     __tablename__ = "system_settings"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
     setting_key = Column(String(100), unique=True, nullable=False, index=True)
     setting_value = Column(String(1000), nullable=True)
     setting_type = Column(String(50), nullable=False) # string, boolean, number
     category = Column(String(100), nullable=False)
     description = Column(Text, nullable=True)
-    updated_by = Column(String(36), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
+    updated_by = Column(UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

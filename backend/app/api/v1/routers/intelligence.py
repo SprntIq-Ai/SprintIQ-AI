@@ -44,7 +44,7 @@ def get_project_health(project_id: str, db: Session = Depends(get_db), current_u
 
 @router.get("/ml/delay/{project_id}")
 def get_ml_project_delay_prediction(project_id: str, db: Session = Depends(get_db), current_user: Profile = Depends(get_current_user)):
-    """Runs Scikit-learn prediction for project delay risk and logs result to MySQL."""
+    """Runs Scikit-learn prediction for project delay risk and logs result to PostgreSQL."""
     res = ml_predictor.predict_project_delay(db, project_id)
     if "error" in res:
         raise HTTPException(status_code=404, detail=res["error"])

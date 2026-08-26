@@ -7,7 +7,7 @@ from app.models.domain import Project, Task, Sprint, Profile, ProjectMember, Git
 def extract_project_features(db: Session, project_id: str) -> dict:
     """
     Extracts raw numerical engineering features for a given project ID
-    from MySQL into a structured dictionary suitable for Pandas/Scikit-learn.
+    from PostgreSQL into a structured dictionary suitable for Pandas/Scikit-learn.
     """
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:

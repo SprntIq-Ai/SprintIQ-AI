@@ -14,7 +14,7 @@ except ImportError:
 
 def calculate_engineering_health(db: Session, project_id: str) -> dict:
     """
-    Calculates transparent weighted Engineering Health Score (0-100) from real MySQL project data.
+    Calculates transparent weighted Engineering Health Score (0-100) from real PostgreSQL project data.
     Generates AI explanations via Gemini API.
     """
     project = db.query(Project).filter(Project.id == project_id).first()

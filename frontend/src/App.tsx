@@ -59,6 +59,8 @@ import { LeaderboardPage } from './pages/developer/LeaderboardPage';
 import { DeveloperSprints } from './pages/developer/DeveloperSprints';
 import { DeveloperAIAssistant } from './pages/developer/DeveloperAIAssistant';
 import { NotificationsPage } from './pages/developer/NotificationsPage';
+import { DeveloperProjects } from './pages/developer/DeveloperProjects';
+import { DeveloperProjectDetail } from './pages/developer/DeveloperProjectDetail';
 
 
 import { ErrorBoundary } from './components/common/ErrorBoundary';
@@ -158,6 +160,8 @@ export const App: React.FC = () => {
               {/* Developer Portal Protected Routes */}
               <Route element={<ProtectedLayout allowedRole="developer" />}>
                 <Route path="/developer/dashboard" element={<DeveloperDashboard />} />
+                <Route path="/developer/projects" element={<DeveloperProjects />} />
+                <Route path="/developer/projects/:projectId" element={<DeveloperProjectDetail />} />
                 <Route path="/developer/tasks" element={<MyTasks />} />
                 <Route path="/developer/focus-mode" element={<FocusMode />} />
                 <Route path="/developer/leaderboard" element={<LeaderboardPage />} />

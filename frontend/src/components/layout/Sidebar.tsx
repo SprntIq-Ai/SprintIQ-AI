@@ -109,6 +109,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onMobileCl
         {
           label: 'My Work',
           links: [
+            { to: '/developer/projects', label: 'Assigned Projects', icon: FolderKanban },
             { to: '/developer/tasks', label: 'Assigned Tasks', icon: ListTodo },
             { to: '/developer/sprints', label: 'Active Sprint', icon: Layers },
           ],

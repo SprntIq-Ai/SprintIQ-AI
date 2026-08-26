@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Eye, EyeOff, Lock, Mail, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../../components/common/Button';
+import { API_BASE_URL } from '../../config/constants';
 
 export interface RoleLoginConfig {
   role: 'admin' | 'manager' | 'developer';
@@ -27,7 +28,7 @@ export interface RoleLoginConfig {
 
 type ForgotStage = 'verify' | 'reset' | 'done';
 
-const G_API = '/api/auth';
+const G_API = `${API_BASE_URL}/auth`;
 
 async function readError(res: Response): Promise<string> {
   try {
@@ -122,7 +123,7 @@ export const RoleLogin: React.FC<RoleLoginConfig> = (cfg) => {
 
       // Implementing Request Timeout manually since loginFn is abstract
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('TIMEOUT')), 10000)
+        setTimeout(() => reject(new Error('TIMEOUT')), 60000)
       );
 
       const res: any = await Promise.race([
@@ -142,14 +143,24 @@ export const RoleLogin: React.FC<RoleLoginConfig> = (cfg) => {
       window.location.href = cfg.redirectPath;
     } catch (err: any) {
       if (err.message === 'TIMEOUT') {
-        setErrorMessage('Authentication server is not responding. Please try again.');
+        setErrorMessage('Authentication server took too long to respond. The server might be booting up (cold-start). Please try again.');
+      } else if (err.response?.status === 401) {
+        setErrorMessage(err.response.data?.detail || err.response.data?.message || 'Invalid email or password.');
+      } else if (err.response?.status === 403) {
+        setErrorMessage(err.response.data?.detail || err.response.data?.message || 'Access denied. Account is inactive or role is incorrect.');
+      } else if (err.response?.status === 404) {
+        setErrorMessage(err.response.data?.detail || err.response.data?.message || 'Authentication service endpoint not found (404). Check API base URL.');
+      } else if (err.response?.status === 429) {
+        setErrorMessage(err.response.data?.detail || err.response.data?.message || 'Too many login attempts. Please try again later.');
+      } else if (err.response?.status >= 500) {
+        setErrorMessage(err.response.data?.detail || err.response.data?.message || 'Internal server error occurred on the authentication server (500). Please contact support.');
       } else if (err.message === 'Network Error') {
         setErrorMessage('Unable to connect to the SprintIQ authentication server.');
       } else if (err.message && err.message.startsWith('ROLE_MISMATCH:')) {
         const rName = err.message.split(':')[1];
         setErrorMessage(`This account does not have ${rName} access.`);
       } else {
-        const errDetail = err?.response?.data?.detail || err?.response?.data?.message || 'Invalid email or password.';
+        const errDetail = err?.response?.data?.detail || err?.response?.data?.message || err.message || 'Invalid email or password.';
         setErrorMessage(errDetail);
       }
 

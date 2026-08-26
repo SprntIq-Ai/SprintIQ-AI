@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../../components/common/Button';
+import { API_BASE_URL } from '../../config/constants';
 
 export const GoogleAuthCallback: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -30,7 +31,7 @@ export const GoogleAuthCallback: React.FC = () => {
       return;
     }
 
-    fetch('/api/auth/google/exchange', {
+    fetch(`${API_BASE_URL}/auth/google/exchange`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code }),

@@ -147,7 +147,7 @@ export const LandingPage: React.FC = () => {
 
       {/* Footer */}
       <footer className="px-8 py-6 text-center text-xs text-slate-500 border-t border-slate-200">
-        SprintIQ AI &copy; 2026 Enterprise SaaS. All rights reserved. Built with React 19, FastAPI, Supabase, and Google Gemini AI.
+        SprintIQ AI &copy; 2026 Enterprise SaaS. All rights reserved. Built with React 19, FastAPI, Railway PostgreSQL, and Google Gemini AI.
       </footer>
     </div>
   );

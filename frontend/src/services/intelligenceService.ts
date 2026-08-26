@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_BASE = '/api';
+import { API_BASE_URL } from '../config/constants';
+
+const API_BASE = API_BASE_URL;
 
 export const getAuthHeaders = () => {
   const token = localStorage.getItem('sprintiq_access_token') || localStorage.getItem('sprintiq_token');

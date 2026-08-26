@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { API_BASE_URL } from '../config/constants';
-import { User, Project, Task, Sprint, NotificationItem, AIAnalysis, ProjectInvitation, Comment, Comment as TaskComment, GitHubProjectInfo, GitHubCentralAnalytics, GitHubRepositoryRow, GitHubRepositoryDetailResponse, GitHubRepoInfo, GitHubLiveStatus, GitHubLiveBranch, GitHubLivePullRequest, GitHubLiveIssue, GitHubLiveActivity, GitHubLiveCommitsPage } from '../types';
+import { User, Project, Task, Sprint, NotificationItem, AIAnalysis, ProjectInvitation, Comment, Comment as TaskComment, GitHubProjectInfo, GitHubCentralAnalytics, GitHubRepositoryRow, GitHubRepositoryDetailResponse, GitHubRepoInfo, GitHubLiveStatus, GitHubLiveBranch, GitHubLivePullRequest, GitHubLiveIssue, GitHubLiveActivity, GitHubLiveCommitsPage, DeveloperProject, DeveloperProjectDetail } from '../types';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -91,6 +91,8 @@ export const developerService = {
   getComments: async (taskId: string) => (await api.get<TaskComment[]>(`/developer/tasks/${taskId}/comments`)).data,
   addComment: async (taskId: string, content: string) => (await api.post(`/developer/tasks/${taskId}/comments`, { content })).data,
   aiChat: async (prompt: string) => (await api.post('/developer/ai-chat', { prompt })).data,
+  getProjects: async () => (await api.get<DeveloperProject[]>('/developer/projects')).data,
+  getProject: async (projectId: string) => (await api.get<DeveloperProjectDetail>(`/developer/projects/${projectId}`)).data,
 };
 
 export const projectService = {

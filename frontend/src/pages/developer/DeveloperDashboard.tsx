@@ -176,7 +176,12 @@ export const DeveloperDashboard: React.FC = () => {
           <h2 className="role-section-title flex items-center gap-2">
             <FolderKanban className="w-5 h-5" style={{ color: 'var(--role-primary)' }} /> My Projects
           </h2>
-          <span className="role-muted">{projects?.length ?? 0} project(s)</span>
+          <div className="flex items-center gap-4">
+            <span className="role-muted">{projects?.length ?? 0} project(s)</span>
+            <Link to="/developer/projects" className="text-xs font-semibold flex items-center gap-1 hover:underline" style={{ color: 'var(--role-primary)' }}>
+              View All Projects <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
         </div>
 
         {!projects || projects.length === 0 ? (
@@ -188,23 +193,25 @@ export const DeveloperDashboard: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {projects.map((p: any) => (
-              <Card key={p.id} hoverEffect className="!p-5">
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <span className="role-chip font-mono">{p.key}</span>
-                  <Badge variant={(p.status || '').toLowerCase() as any}>{p.status}</Badge>
-                </div>
-                <h3 className="role-card-title truncate">{p.name}</h3>
-                <p className="role-muted mt-1 truncate">Manager: {p.manager_name || 'Unassigned'}</p>
-                <div className="mt-4 pt-3" style={{ borderTop: '1px solid var(--role-border-subtle)' }}>
-                  <div className="flex items-center justify-between text-[11px] mb-1.5">
-                    <span style={{ color: 'var(--role-text-muted)' }}>{p.total_tasks ?? 0} assigned tasks</span>
-                    <span className="font-semibold" style={{ color: 'var(--role-success, #22C55E)' }}>
-                      {p.completed_tasks ?? 0} completed
-                    </span>
+              <Link to={`/developer/projects/${p.id}`} key={p.id} className="block group">
+                <Card hoverEffect className="!p-5 h-full transition-transform duration-200 group-hover:-translate-y-1">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <span className="role-chip font-mono">{p.key}</span>
+                    <Badge variant={(p.status || '').toLowerCase() as any}>{p.status}</Badge>
                   </div>
-                  <ProgressBar value={(p.completed_tasks ?? 0)} max={Math.max(p.total_tasks ?? 0, 1)} size="sm" />
-                </div>
-              </Card>
+                  <h3 className="role-card-title truncate group-hover:text-[var(--role-primary)] transition-colors">{p.name}</h3>
+                  <p className="role-muted mt-1 truncate">Manager: {p.manager_name || 'Unassigned'}</p>
+                  <div className="mt-4 pt-3" style={{ borderTop: '1px solid var(--role-border-subtle)' }}>
+                    <div className="flex items-center justify-between text-[11px] mb-1.5">
+                      <span style={{ color: 'var(--role-text-muted)' }}>{p.total_tasks ?? 0} assigned tasks</span>
+                      <span className="font-semibold" style={{ color: 'var(--role-success, #22C55E)' }}>
+                        {p.completed_tasks ?? 0} completed
+                      </span>
+                    </div>
+                    <ProgressBar value={(p.completed_tasks ?? 0)} max={Math.max(p.total_tasks ?? 0, 1)} size="sm" />
+                  </div>
+                </Card>
+              </Link>
             ))}
           </div>
         )}

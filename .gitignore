@@ -1,11 +1,16 @@
 .env
 .env.*
 !.env.example
+
 *.db
+sprintiq.db
+backend/sprintiq.db
+
 node_modules/
 dist/
 build/
 .vite/
+
 __pycache__/
 *.pyc
 *.log

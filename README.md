@@ -86,7 +86,7 @@ cd backend
 python -m venv venv
 # On Windows
 venv\Scripts\activate  
-# Install dependencies
+# Install dependenciesnn
 pip install -r requirements.txt
 # Run database initialization and server
 python main.py

@@ -246,9 +246,20 @@ def _new_captcha() -> Dict[str, str]:
 def get_public_settings(db: Session = Depends(get_db)):
     keys = ["captcha_enabled", "google_login_enabled"]
     res = {}
-    for k in keys:
-        s = db.query(SystemSetting).filter(SystemSetting.setting_key == k).first()
-        res[k] = s.setting_value == "true" if s else False
+    try:
+        for k in keys:
+            s = db.query(SystemSetting).filter(SystemSetting.setting_key == k).first()
+            if s:
+                res[k] = s.setting_value == "true"
+            else:
+                if k == "google_login_enabled":
+                    res[k] = bool(settings.GOOGLE_CLIENT_ID)
+                else:
+                    res[k] = False
+    except Exception as e:
+        print(f"[Auth Warning] Public settings load error (db issue): {e}")
+        res["captcha_enabled"] = False
+        res["google_login_enabled"] = bool(settings.GOOGLE_CLIENT_ID)
     return res
 
 

@@ -325,3 +325,154 @@ def developer_ai_chat(req: AIChatRequest, db: Session = Depends(get_db), current
     if result.get("error"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=result["error"])
     return {"prompt": req.prompt, "response": result["answer"]}
+
+
+@router.get("/projects")
+def get_developer_projects(db: Session = Depends(get_db), current_user: Profile = Depends(dev_guard)):
+    assigned_tasks = db.query(Task).filter(Task.assigned_developer_id == current_user.id).all()
+    memberships = db.query(ProjectMember).filter(ProjectMember.user_id == current_user.id).all()
+    project_ids = {m.project_id for m in memberships}
+    task_proj_ids = {t.project_id for t in assigned_tasks if t.project_id}
+    project_ids |= task_proj_ids
+    
+    assigned_projects = db.query(Project).filter(Project.id.in_(project_ids)).all() if project_ids else []
+    
+    projects_res = []
+    for p in assigned_projects:
+        manager = db.query(Profile).filter(Profile.id == p.manager_id).first() if p.manager_id else None
+        
+        # Count tasks assigned to THIS developer in THIS project
+        total = db.query(Task).filter(Task.project_id == p.id, Task.assigned_developer_id == current_user.id).count()
+        completed = db.query(Task).filter(Task.project_id == p.id, Task.assigned_developer_id == current_user.id, Task.status == "COMPLETED").count()
+        in_progress = db.query(Task).filter(Task.project_id == p.id, Task.assigned_developer_id == current_user.id, Task.status == "IN_PROGRESS").count()
+        review_pending = db.query(Task).filter(Task.project_id == p.id, Task.assigned_developer_id == current_user.id, Task.status == "REVIEW_PENDING").count()
+        
+        progress = (completed / max(total, 1)) * 100
+        
+        projects_res.append({
+            "id": p.id,
+            "key": p.key,
+            "name": p.name,
+            "description": p.description,
+            "status": p.status,
+            "manager_id": p.manager_id,
+            "manager_name": manager.full_name if manager else "Unassigned",
+            "created_at": p.created_at,
+            "total_tasks": total,
+            "completed_tasks": completed,
+            "in_progress_tasks": in_progress,
+            "review_pending_tasks": review_pending,
+            "progress_percentage": round(progress, 1)
+        })
+        
+    return projects_res
+
+
+@router.get("/projects/{project_id}")
+def get_developer_project_detail(project_id: str, db: Session = Depends(get_db), current_user: Profile = Depends(dev_guard)):
+    try:
+        uuid_project_id = uuid.UUID(project_id)
+    except (ValueError, AttributeError):
+        raise HTTPException(status_code=404, detail="Project not found.")
+
+    project = db.query(Project).filter(Project.id == uuid_project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found.")
+
+    # Check authority
+    is_member = db.query(ProjectMember).filter(
+        ProjectMember.project_id == uuid_project_id,
+        ProjectMember.user_id == current_user.id
+    ).first() is not None
+
+    assigned_tasks = db.query(Task).filter(
+        Task.project_id == uuid_project_id,
+        Task.assigned_developer_id == current_user.id
+    ).all()
+
+    has_tasks = len(assigned_tasks) > 0
+
+    if not (is_member or has_tasks):
+        raise HTTPException(status_code=403, detail="You don't have access to this project.")
+
+    # Calculate developer workload metrics for this project
+    total = len(assigned_tasks)
+    completed = sum(1 for t in assigned_tasks if t.status == "COMPLETED")
+    in_progress = sum(1 for t in assigned_tasks if t.status == "IN_PROGRESS")
+    review_pending = sum(1 for t in assigned_tasks if t.status == "REVIEW_PENDING")
+    overall_progress = (completed / max(total, 1)) * 100
+
+    # Project Manager
+    manager = db.query(Profile).filter(Profile.id == project.manager_id).first() if project.manager_id else None
+
+    # Tasks assigned to this developer in this project
+    tasks_res = []
+    for t in assigned_tasks:
+        sprint = db.query(Sprint).filter(Sprint.id == t.sprint_id).first() if t.sprint_id else None
+        tasks_res.append({
+            "id": t.id,
+            "title": t.title,
+            "description": t.description,
+            "priority": t.priority,
+            "status": t.status,
+            "progress": t.progress,
+            "sprint_id": t.sprint_id,
+            "sprint_name": sprint.name if sprint else "No Sprint",
+            "story_points": t.story_points,
+            "estimated_hours": t.estimated_hours,
+            "start_date": t.start_date,
+            "due_date": t.due_date,
+            "submitted_at": t.submitted_at,
+            "reviewed_at": t.reviewed_at,
+            "review_comment": t.review_comment
+        })
+
+    # Sprints relevant to this project
+    sprints = db.query(Sprint).filter(Sprint.project_id == uuid_project_id).all()
+    sprints_res = [{
+        "id": s.id,
+        "name": s.name,
+        "status": s.status,
+        "start_date": s.start_date,
+        "end_date": s.end_date,
+        "goal": s.goal
+    } for s in sprints]
+
+    # Team members in project
+    members = db.query(ProjectMember).filter(ProjectMember.project_id == uuid_project_id).all()
+    team_res = []
+    for m in members:
+        member = db.query(Profile).filter(Profile.id == m.user_id).first()
+        if not member:
+            continue
+        team_res.append({
+            "id": member.id,
+            "full_name": member.full_name,
+            "email": member.email,
+            "role_in_project": m.role_in_project
+        })
+
+    return {
+        "project": {
+            "id": project.id,
+            "key": project.key,
+            "name": project.name,
+            "description": project.description,
+            "status": project.status,
+            "manager_id": project.manager_id,
+            "manager_name": manager.full_name if manager else "Unassigned",
+            "start_date": project.start_date,
+            "target_date": project.target_date,
+            "created_at": project.created_at
+        },
+        "developer_summary": {
+            "assigned_task_count": total,
+            "completed_task_count": completed,
+            "in_progress_task_count": in_progress,
+            "review_pending_task_count": review_pending,
+            "overall_progress": round(overall_progress, 1)
+        },
+        "tasks": tasks_res,
+        "sprints": sprints_res,
+        "team": team_res
+    }
