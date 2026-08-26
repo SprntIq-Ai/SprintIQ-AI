@@ -162,6 +162,47 @@ def test_profile_role_uuid_coercion():
         session.close()
 
 
+def test_developer_projects_uuid_coercion():
+    """Verify that compiling Project.id.in_(project_ids) with PostgreSQL dialect
+    binds UUID objects as string representations and contains no ::uuid cast.
+    """
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    import uuid
+    from app.models.domain import Base, Project, ProjectMember, Task
+    from sqlalchemy.dialects import postgresql as pg_dialect
+
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    try:
+        # Create developer project IDs list with native UUID objects
+        uuids_list = [uuid.uuid4(), uuid.uuid4()]
+
+        # Test 1: Compile Project.id.in_(uuids_list) with PostgreSQL dialect
+        query = session.query(Project).filter(Project.id.in_(uuids_list))
+        dialect = pg_dialect.dialect()
+        compiled = query.statement.compile(dialect=dialect)
+        sql_str = str(compiled)
+
+        # Core checks
+        assert "::uuid" not in sql_str.lower(), f"Compiled projects query contains ::uuid cast: {sql_str}"
+
+        # Check bind parameter processor for Project.id
+        bind_processor = Project.id.type.bind_processor(dialect)
+        assert bind_processor is not None, "Project.id must supply a bind parameter processor"
+        for uid in uuids_list:
+            processed_param = bind_processor(uid)
+            assert isinstance(processed_param, str), f"Expected processed parameter to be string, got {type(processed_param)}"
+
+        print("PASS: test_developer_projects_uuid_coercion SQL query compilation contains no ::uuid cast and binds parameters as strings.")
+        return True
+    finally:
+        session.close()
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print("UUID -> String(36) Regression Tests")
@@ -173,6 +214,7 @@ if __name__ == "__main__":
     results.append(("Compatibility fn is no-op", test_ensure_postgresql_compatibilities_is_noop()))
     results.append(("No UUID import in models", test_no_uuid_import_in_models()))
     results.append(("Role/Profile UUID Coercion Test", test_profile_role_uuid_coercion()))
+    results.append(("Developer Projects UUID Coercion Test", test_developer_projects_uuid_coercion()))
 
     print("\n" + "=" * 60)
     print("Results:")

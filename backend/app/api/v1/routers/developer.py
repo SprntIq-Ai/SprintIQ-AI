@@ -42,12 +42,13 @@ def get_developer_dashboard(db: Session = Depends(get_db), current_user: Profile
     # Fallback: projects containing tasks assigned to this developer, so a
     # developer who owns tasks in a project always sees that project.
     memberships = db.query(ProjectMember).filter(ProjectMember.user_id == current_user.id).all()
-    project_ids = {m.project_id for m in memberships}
-    task_proj_ids = {t.project_id for t in assigned_tasks if t.project_id}
+    project_ids = {str(m.project_id) for m in memberships if m.project_id}
+    task_proj_ids = {str(t.project_id) for t in assigned_tasks if t.project_id}
     project_ids |= task_proj_ids
-    assigned_projects = db.query(Project).filter(Project.id.in_(project_ids)).all() if project_ids else []
+    project_ids_list = [str(pid) for pid in project_ids]
+    assigned_projects = db.query(Project).filter(Project.id.in_(project_ids_list)).all() if project_ids_list else []
     # Safe development logging - never log passwords/tokens
-    print(f"[DeveloperDashboard] authenticated_user_id={current_user.id} number_of_projects={len(assigned_projects)} project_ids={sorted(project_ids)}")
+    print(f"[DeveloperDashboard] authenticated_user_id={current_user.id} number_of_projects={len(assigned_projects)} project_ids={sorted(list(project_ids))}")
     projects_res = []
     for p in assigned_projects:
         manager = db.query(Profile).filter(Profile.id == p.manager_id).first() if p.manager_id else None
@@ -331,11 +332,12 @@ def developer_ai_chat(req: AIChatRequest, db: Session = Depends(get_db), current
 def get_developer_projects(db: Session = Depends(get_db), current_user: Profile = Depends(dev_guard)):
     assigned_tasks = db.query(Task).filter(Task.assigned_developer_id == current_user.id).all()
     memberships = db.query(ProjectMember).filter(ProjectMember.user_id == current_user.id).all()
-    project_ids = {m.project_id for m in memberships}
-    task_proj_ids = {t.project_id for t in assigned_tasks if t.project_id}
+    project_ids = {str(m.project_id) for m in memberships if m.project_id}
+    task_proj_ids = {str(t.project_id) for t in assigned_tasks if t.project_id}
     project_ids |= task_proj_ids
     
-    assigned_projects = db.query(Project).filter(Project.id.in_(project_ids)).all() if project_ids else []
+    project_ids_list = [str(pid) for pid in project_ids]
+    assigned_projects = db.query(Project).filter(Project.id.in_(project_ids_list)).all() if project_ids_list else []
     
     projects_res = []
     for p in assigned_projects:
@@ -371,7 +373,7 @@ def get_developer_projects(db: Session = Depends(get_db), current_user: Profile 
 @router.get("/projects/{project_id}")
 def get_developer_project_detail(project_id: str, db: Session = Depends(get_db), current_user: Profile = Depends(dev_guard)):
     try:
-        uuid_project_id = uuid.UUID(project_id)
+        uuid_project_id = str(uuid.UUID(project_id))
     except (ValueError, AttributeError):
         raise HTTPException(status_code=404, detail="Project not found.")
 

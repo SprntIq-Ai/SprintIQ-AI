@@ -39,7 +39,7 @@ class Role(Base):
 class Profile(Base):
     __tablename__ = "profiles"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    id = Column(ForceString(36), primary_key=True, default=generate_uuid)
     email = Column(String(255), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
     full_name = Column(String(255), nullable=False)
@@ -60,7 +60,7 @@ class Profile(Base):
 class Project(Base):
     __tablename__ = "projects"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    id = Column(ForceString(36), primary_key=True, default=generate_uuid)
     name = Column(String(255), nullable=False)
     key = Column(String(20), unique=True, nullable=False)
     description = Column(Text, nullable=True)
@@ -68,7 +68,7 @@ class Project(Base):
     start_date = Column(Date, nullable=True)
     target_date = Column(Date, nullable=True)
     created_by = Column(String(36), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
-    manager_id = Column(String(36), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
+    manager_id = Column(ForceString(36), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
     ai_risk_score = Column(Float, default=0.0)
     health_status = Column(String(50), default="HEALTHY") # HEALTHY, AT_RISK, CRITICAL
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -84,8 +84,8 @@ class ProjectMember(Base):
     __tablename__ = "project_members"
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
-    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
-    user_id = Column(String(36), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
+    project_id = Column(ForceString(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(ForceString(36), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
     role_in_project = Column(String(50), nullable=False) # MANAGER, DEVELOPER
     team = Column(String(100), nullable=True)
     joined_at = Column(DateTime, default=datetime.utcnow)
@@ -140,7 +140,7 @@ class Task(Base):
     story_points = Column(Integer, default=1)
     start_date = Column(Date, nullable=True)
     due_date = Column(Date, nullable=True)
-    assigned_developer_id = Column(String(36), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
+    assigned_developer_id = Column(ForceString(36), ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
     created_by = Column(String(36), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
