@@ -89,6 +89,21 @@ async def gemini_error_handler(request, exc: GeminiError):
     return JSONResponse(status_code=exc.status_code, content={"detail": str(exc)})
 
 
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc: Exception):
+    import traceback
+    tb = traceback.format_exc()
+    print(f"[Unhandled Exception]:\n{tb}")
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": str(exc),
+            "traceback": tb.splitlines()
+        }
+    )
+
+
+
 @app.get("/")
 def read_root():
     return {
