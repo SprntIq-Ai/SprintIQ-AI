@@ -120,6 +120,81 @@ def health_check():
     }
 
 
+@app.get("/api/temp-debug")
+def temp_debug():
+    import os
+    from sqlalchemy import text, inspect
+    from app.models.domain import Profile, Role, SystemSetting
+    
+    db = SessionLocal()
+    report = {}
+    
+    # 1. Environment Info
+    report["env"] = {
+        "DATABASE_URL_SET": bool(settings.DATABASE_URL),
+        "SECRET_KEY_SET": bool(settings.SECRET_KEY),
+        "SECRET_KEY_VAL_LEN": len(settings.SECRET_KEY) if settings.SECRET_KEY else 0,
+        "JWT_ALGORITHM": settings.ALGORITHM,
+        "ENVIRONMENT": settings.ENVIRONMENT,
+    }
+    
+    # 2. Database Connection and Tables Check
+    try:
+        inspector = inspect(engine)
+        tables = inspector.get_table_names()
+        report["db"] = {
+            "connected": True,
+            "dialect": engine.dialect.name,
+            "tables": tables
+        }
+    except Exception as e:
+        import traceback
+        report["db"] = {
+            "connected": False,
+            "error": str(e),
+            "traceback": traceback.format_exc().splitlines()
+        }
+        db.close()
+        return report
+
+    # 3. Tables Row Counts and Content Check
+    try:
+        profile_count = db.query(Profile).count()
+        role_count = db.query(Role).count()
+        setting_count = db.query(SystemSetting).count()
+        
+        report["counts"] = {
+            "profiles": profile_count,
+            "roles": role_count,
+            "system_settings": setting_count
+        }
+        
+        # Look for dev and manager
+        dev = db.query(Profile).filter(Profile.email == "dev@sprintiq.ai").first()
+        mgr = db.query(Profile).filter(Profile.email == "manager@sprintiq.ai").first()
+        
+        report["seed_users"] = {
+            "dev_exists": bool(dev),
+            "dev_status": dev.status if dev else None,
+            "dev_role_id": dev.role_id if dev else None,
+            "dev_pw_hash": dev.password_hash[:10] + "..." if dev and dev.password_hash else None,
+            "mgr_exists": bool(mgr),
+            "mgr_status": mgr.status if mgr else None,
+            "mgr_role_id": mgr.role_id if mgr else None,
+            "mgr_pw_hash": mgr.password_hash[:10] + "..." if mgr and mgr.password_hash else None,
+        }
+    except Exception as e:
+        import traceback
+        report["data_error"] = {
+            "error": str(e),
+            "traceback": traceback.format_exc().splitlines()
+        }
+        
+    db.close()
+    return report
+
+
+
 @app.get("/health/db")
 @app.get("/api/health/db")
 def health_check_db():
