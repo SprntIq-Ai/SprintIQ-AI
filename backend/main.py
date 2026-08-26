@@ -25,7 +25,13 @@ app = FastAPI(
 )
 
 # CORS setup
-origins = ["http://localhost:5173"]
+origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+    "https://sprint-iq-ai.vercel.app"
+]
 
 if settings.FRONTEND_URL:
     u = settings.FRONTEND_URL.strip()
@@ -46,7 +52,7 @@ for o in origins:
     normalized = o.rstrip('/')
     if normalized not in seen_origins:
         seen_origins.add(normalized)
-        unique_origins.append(o)
+        unique_origins.append(normalized)
 
 app.add_middleware(
     CORSMiddleware,
@@ -55,6 +61,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # Mount API routers
 app.include_router(auth.router, prefix="/api")
