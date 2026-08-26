@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "SprintIQ AI"
     ENVIRONMENT: str = "development"
 
-    SECRET_KEY: str = ""
+    SECRET_KEY: str = "fallback_secret_key_sprint_iq_ai_production_backup_key_2026"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
