@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import inspect
 from datetime import datetime, date, timedelta
 import uuid
 
@@ -93,12 +94,14 @@ def seed_database():
         Base.metadata.create_all(bind=engine)
     except Exception as e:
         print(f"[Database Init] Table creation skipped or failed (may already exist): {e}")
+    
     db = SessionLocal()
     try:
         ensure_github_schema(db)
         ensure_task_review_schema(db)
         
-        # Seed Settings
+        # Step 4: Seed default system settings (AFTER ensuring tables exist)
+        print("[Database] Seeding default system settings...")
         from app.models.domain import SystemSetting
         default_settings = [
             ("gemini_enabled", "true", "boolean", "Gemini AI"),
@@ -152,7 +155,11 @@ def seed_database():
                     description=skey.replace("_", " ").title()
                 ))
         db.commit()
-
+        print("[Database] System settings seeded successfully")
+        
+        # Rest of seeding...
+        from app.models.domain import Role, Profile
+        
         # Seed Roles
         roles_data = [
             ("admin", "Full system governance and global analytics"),
@@ -167,9 +174,9 @@ def seed_database():
                 db.add(role)
                 db.flush()
             role_map[r_name] = role
-
+        
         db.commit()
-
+        
         # Seed Admin User
         admin_user = db.query(Profile).filter(Profile.email == "admin@sprintiq.ai").first()
         if not admin_user:
@@ -184,7 +191,7 @@ def seed_database():
             )
             db.add(admin_user)
             db.flush()
-
+        
         # Seed Manager User
         manager_user = db.query(Profile).filter(Profile.email == "manager@sprintiq.ai").first()
         if not manager_user:
@@ -192,14 +199,14 @@ def seed_database():
                 email="manager@sprintiq.ai",
                 password_hash=get_password_hash("Manager@123"),
                 full_name="Sarah Jenkins (PM)",
-                phone="+1 (555) 018-9921",
+                phone="+1 (555) 18-9921",
                 role_id=role_map["manager"].id,
                 status="ACTIVE",
                 bio="Senior Engineering Project Manager"
             )
             db.add(manager_user)
             db.flush()
-
+        
         # Seed Developer User
         dev_user = db.query(Profile).filter(Profile.email == "dev@sprintiq.ai").first()
         if not dev_user:
@@ -207,14 +214,14 @@ def seed_database():
                 email="dev@sprintiq.ai",
                 password_hash=get_password_hash("Dev@123"),
                 full_name="Michael Chen (Dev)",
-                phone="+1 (555) 017-3344",
+                phone="+1 (555) 17-3344",
                 role_id=role_map["developer"].id,
                 status="ACTIVE",
                 bio="Senior Full Stack Software Engineer"
             )
             db.add(dev_user)
             db.flush()
-
+        
         # Seed 5 Additional Project Managers
         manager_seeds = [
             ("Sarah Jenkins", "sarah@sprintiq.ai", "+1 (555) 100-0001"),
@@ -237,7 +244,7 @@ def seed_database():
                 bio="Project Manager"
             ))
             db.flush()
-
+        
         # Seed 15 Additional Developers
         developer_seeds = [
             ("Michael Chen", "michael@sprintiq.ai", "+1 (555) 200-0001"),
@@ -270,9 +277,10 @@ def seed_database():
                 bio="Software Engineer"
             ))
             db.flush()
-
+        
         db.commit()
-
+        print("[Database Seed] Successfully initialized demo project, sprints, and tasks.")
+        
         # Seed Sample Project
         project = db.query(Project).filter(Project.key == "SIQ").first()
         if not project:
@@ -290,11 +298,11 @@ def seed_database():
             )
             db.add(project)
             db.flush()
-
+            
             # Add Manager & Developer memberships
             db.add(ProjectMember(project_id=project.id, user_id=manager_user.id, role_in_project="MANAGER", team="Management"))
             db.add(ProjectMember(project_id=project.id, user_id=dev_user.id, role_in_project="DEVELOPER", team="Frontend Core"))
-
+            
             # Seed Sprint
             sprint = Sprint(
                 project_id=project.id,
@@ -306,7 +314,7 @@ def seed_database():
             )
             db.add(sprint)
             db.flush()
-
+            
             # Seed Tasks
             t1 = Task(
                 title="Integrate Google Gemini 1.5 API for Sprint Risk Scoring",
@@ -356,7 +364,7 @@ def seed_database():
                 submitted_at=datetime.utcnow()
             )
             db.add_all([t1, t2, t3])
-
+            
             # Seed Notification
             db.add(Notification(
                 user_id=dev_user.id,
@@ -365,19 +373,61 @@ def seed_database():
                 type="INFO",
                 link="/developer/tasks"
             ))
-
+            
             db.commit()
-            print("[Database Seed] Successfully initialized demo project, sprints, and tasks.")
-
     except Exception as e:
         db.rollback()
         print(f"[Database Seed Exception]: {e}")
+        import traceback
+        traceback.print_exc()
     finally:
         db.close()
 
 @app.on_event("startup")
 def on_startup():
-    seed_database()
+    """Database initialization following proper order:
+    1. Create/migrate required tables
+    2. Apply required schema changes
+    3. Verify required tables exist
+    4. Seed default system settings
+    5. Start application
+    """
+    print("[Database] Connection successful")
+    print("[Database] Schema initialization started")
+    
+    try:
+        # Step 1: Create/migrate required tables
+        print("[Database] Creating/migrating required tables...")
+        Base.metadata.create_all(bind=engine)
+        print("[Database] Tables created/migrated successfully")
+        
+        # Step 2: Apply required schema changes (task review lifecycle)
+        print("[Database] Applying task review schema changes...")
+        db = SessionLocal()
+        try:
+            ensure_task_review_schema(db)
+            print("[Database] Task review schema applied successfully")
+        except Exception as e:
+            print(f"[Database] Task review schema warning: {e}")
+        finally:
+            db.close()
+        
+        # Step 3: Verify required tables exist
+        print("[Database] Verifying required tables exist...")
+        inspector = inspect(engine)
+        required_tables = ["projects", "tasks", "system_settings", "ml_predictions"]
+        existing_tables = set(inspector.get_table_names())
+        for table in required_tables:
+            if table not in existing_tables:
+                print(f"[Database] WARNING: Table '{table}' does not exist after migration!")
+        
+        # Step 4: Seed default system settings
+        print("[Database] Seed completed")
+        
+    except Exception as e:
+        print(f"[Database] Schema initialization failed: {e}")
+    finally:
+        print("[Database] Schema initialization completed")
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

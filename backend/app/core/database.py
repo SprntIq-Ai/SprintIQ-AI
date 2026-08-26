@@ -46,9 +46,9 @@ def ensure_task_review_schema(db):
     inspector = inspect(engine)
     additions = {
         "tasks": [
-            ("submitted_at", "DATETIME"),
+            ("submitted_at", "TIMESTAMP"),
             ("reviewed_by", "VARCHAR(36)"),
-            ("reviewed_at", "DATETIME"),
+            ("reviewed_at", "TIMESTAMP"),
             ("review_comment", "TEXT"),
         ]
     }
@@ -96,8 +96,8 @@ def ensure_github_schema(db):
             ("clone_url", "TEXT"),
             ("repository_url", "TEXT"),
             ("normalized_url", "TEXT"),
-            ("created_at", "DATETIME"),
-            ("updated_at", "DATETIME"),
+            ("created_at", "TIMESTAMP"),
+            ("updated_at", "TIMESTAMP"),
             ("description", "TEXT"),
             ("visibility", "VARCHAR(50) DEFAULT 'private'"),
             ("repo_type", "VARCHAR(50) DEFAULT 'source'"),
