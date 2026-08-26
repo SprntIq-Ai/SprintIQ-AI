@@ -55,59 +55,18 @@ def get_db():
 
 
 def ensure_postgresql_compatibilities(db):
-    """Audits and alters column types of project_id, profile references, and role references in PostgreSQL
-    from VARCHAR to UUID if they have mismatched types, ensuring DDL constraints can be satisfied.
-    This runs BEFORE Base.metadata.create_all."""
-    if "postgresql" not in engine.dialect.name:
-        return
-        
-    print("[Database Log] Auditing PostgreSQL schema compatibility...")
-    columns_to_audit = [
-        "project_id", "role_id", "user_id", "developer_id", 
-        "created_by", "manager_id", "assigned_developer_id", "reviewed_by", 
-        "uploaded_by", "updated_by", "author_id", "generated_by", 
-        "added_by", "task_id", "sprint_id", "repository_id", 
-        "retrospective_id", "pr_id", "assignee_id", "simulation_id", "release_readiness_id"
-    ]
-    
-    try:
-        for col in columns_to_audit:
-            query = text(
-                "SELECT table_name, data_type FROM information_schema.columns "
-                "WHERE column_name = :col_name AND data_type != 'uuid' "
-                "AND table_schema = 'public'"
-            )
-            rows = db.execute(query, {"col_name": col}).all()
-            for row in rows:
-                table_name = row[0]
-                current_type = row[1]
-                print(f"[Database Log] Column '{col}' in table '{table_name}' has type '{current_type}'. Changing to UUID.")
-                
-                # 1. Update empty string values to NULL before casting
-                try:
-                    db.execute(text(f"UPDATE {table_name} SET {col} = NULL WHERE {col} = ''"))
-                except Exception:
-                    pass
-                
-                # 2. Drop foreign key constraint if it exists (standard convention)
-                db.execute(text(f"ALTER TABLE {table_name} DROP CONSTRAINT IF EXISTS {table_name}_{col}_fkey"))
-                
-                # 3. Alter column type cast to uuid
-                db.execute(text(f"ALTER TABLE {table_name} ALTER COLUMN {col} TYPE UUID USING {col}::uuid"))
-        db.commit()
-        print("[Database Log] PostgreSQL schema compatibility audit complete.")
-    except Exception as e:
-        db.rollback()
-        print(f"[Database Log] PostgreSQL schema audit exception: {e}")
-        raise e
+    """Refactored to be a non-destructive no-op mechanism.
+    Prevents database schema fracturing by skipping automated VARCHAR-to-UUID casts on startup.
+    """
+    print("[Database Log] Auditing PostgreSQL schema compatibility: Skipped (non-destructive compatibility mode active).")
+    return
 
 
 def ensure_task_review_schema(db):
     """Adds task-review lifecycle columns and backfills legacy COMPLETED tasks so
     they enter the manager review flow (developer submits -> manager approves)."""
     inspector = inspect(engine)
-    is_postgres = "postgresql" in engine.dialect.name
-    uuid_type = "UUID" if is_postgres else "VARCHAR(36)"
+    uuid_type = "VARCHAR(36)"
     
     additions = {
         "tasks": [
@@ -155,8 +114,7 @@ def ensure_task_review_schema(db):
 def ensure_github_schema(db):
     """Adds columns to pre-existing GitHub tables that predate schema migrations."""
     inspector = inspect(engine)
-    is_postgres = "postgresql" in engine.dialect.name
-    uuid_type = "UUID" if is_postgres else "VARCHAR(36)"
+    uuid_type = "VARCHAR(36)"
     
     additions = {
         "github_repositories": [

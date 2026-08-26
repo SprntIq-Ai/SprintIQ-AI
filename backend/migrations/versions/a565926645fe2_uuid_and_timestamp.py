@@ -22,13 +22,9 @@ def upgrade() -> None:
     # ### commands auto generated - manually adjusted for PostgreSQL compatibility ###
     bind = op.get_bind()
     if bind.dialect.name == "postgresql":
-        # Change ml_predictions.project_id from VARCHAR(36) to UUID
-        op.alter_column(
-            "ml_predictions",
-            "project_id",
-            type_=sa.UUID(),
-            postgresql_using="project_id::uuid",
-        )
+        # NOTE: The original ALTER of ml_predictions.project_id to UUID has been
+        # intentionally removed to prevent schema fracturing. All identity/FK
+        # columns now use VARCHAR(36)/String(36) consistently.
 
         # Change task review schema columns from DATETIME to TIMESTAMP
         op.alter_column("tasks", "submitted_at", type_=sa.TIMESTAMP())
