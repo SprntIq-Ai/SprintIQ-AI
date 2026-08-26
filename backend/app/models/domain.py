@@ -1,10 +1,27 @@
 import uuid
 from datetime import datetime, date
 from sqlalchemy import (
-    Column, String, Text, ForeignKey, Boolean, Integer, Float, Date, DateTime, JSON
+    Column, String, Text, ForeignKey, Boolean, Integer, Float, Date, DateTime, JSON, TypeDecorator
 )
 from sqlalchemy.orm import relationship
 from app.core.database import Base
+
+class ForceString(TypeDecorator):
+    """Custom String type that guarantees all parameter bindings and result values
+    are Python string representations, avoiding type mismatches with driver UUIDs.
+    """
+    impl = String
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        return str(value)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        return str(value)
 
 def generate_uuid():
     return str(uuid.uuid4())
@@ -12,7 +29,7 @@ def generate_uuid():
 class Role(Base):
     __tablename__ = "roles"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    id = Column(ForceString(36), primary_key=True, default=generate_uuid)
     name = Column(String(50), unique=True, nullable=False) # admin, manager, developer
     description = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -28,7 +45,7 @@ class Profile(Base):
     full_name = Column(String(255), nullable=False)
     phone = Column(String(50), nullable=True)
     avatar_url = Column(Text, nullable=True)
-    role_id = Column(String(36), ForeignKey("roles.id", ondelete="CASCADE"), nullable=False)
+    role_id = Column(ForceString(36), ForeignKey("roles.id", ondelete="CASCADE"), nullable=False)
     status = Column(String(50), default="ACTIVE") # ACTIVE, INACTIVE, PENDING
     bio = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)

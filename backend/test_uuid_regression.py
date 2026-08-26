@@ -83,6 +83,85 @@ def test_no_uuid_import_in_models():
         return True
 
 
+def test_profile_role_uuid_coercion():
+    """Verify that assigning a Python uuid.UUID to Profile.role_id, loading Profile.role,
+    and compiling the query for PostgreSQL correctly binds the UUID value as a string
+    without ::uuid cast, and lazy loading still succeeds.
+    """
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    import uuid
+    from app.models.domain import Base, Profile, Role
+
+    # Create an in-memory database to test the actual DB interaction loop
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    try:
+        # 1. Create a Role
+        role_id_str = str(uuid.uuid4())
+        test_role = Role(
+            id=role_id_str,
+            name="test_dev",
+            description="Test Developer"
+        )
+        session.add(test_role)
+        session.commit()
+
+        # 2. Simulate raw database driver retrieving UUID from a UUID column
+        # by instantiating a Profile object with a python uuid.UUID object for role_id.
+        role_id_uuid = uuid.UUID(role_id_str)
+        profile_id = str(uuid.uuid4())
+        test_profile = Profile(
+            id=profile_id,
+            email="test@sprintiq.ai",
+            password_hash="fake",
+            full_name="Test User",
+            role_id=role_id_uuid  # Pass native Python uuid.UUID object!
+        )
+        session.add(test_profile)
+        session.commit()
+        session.expunge_all()
+
+        # 3. Retrieve the profile from database
+        retrieved_profile = session.query(Profile).filter(Profile.id == profile_id).one()
+
+        # Verify role_id was coerced to string on load/use
+        print(f"Retrieved profile.role_id: {retrieved_profile.role_id} (type: {type(retrieved_profile.role_id)})")
+        assert isinstance(retrieved_profile.role_id, str), "role_id was not coerced to string"
+        assert retrieved_profile.role_id == role_id_str
+
+        # 4. Access the relationship to verify it loads without errors and resolves to the correct Role object
+        resolved_role = retrieved_profile.role
+        assert resolved_role is not None
+        assert resolved_role.id == role_id_str
+        print("PASS: Normal Role/Profile relationship lazy loading works with UUID input value.")
+
+        # 5. Compile query for loading Profile.role with PostgreSQL dialect and verify type conversion at the dialect bind level
+        from sqlalchemy.dialects import postgresql as pg_dialect
+        dialect = pg_dialect.dialect()
+
+        query = session.query(Role).filter(Role.id == role_id_uuid)
+        compiled = query.statement.compile(dialect=dialect)
+        sql_str = str(compiled)
+
+        # Get and execute the custom bind parameter processor for this dialect
+        bind_processor = Role.id.type.bind_processor(dialect)
+        assert bind_processor is not None, "ForceString must supply a bind parameter processor"
+        processed_param_value = bind_processor(role_id_uuid)
+        print(f"Processed bind parameter value type: {type(processed_param_value)} (value: {processed_param_value})")
+
+        assert isinstance(processed_param_value, str), f"Parameter was not coerced to string by bind processor, got {type(processed_param_value)}"
+        assert "::uuid" not in sql_str.lower(), "Compiled SQL contains ::uuid cast!"
+
+        print("PASS: PostgreSQL SQL query compilation contains no ::uuid cast and binds parameter as string.")
+        return True
+    finally:
+        session.close()
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print("UUID -> String(36) Regression Tests")
@@ -93,6 +172,7 @@ if __name__ == "__main__":
     results.append(("No ::uuid cast in SQL", test_no_uuid_cast_in_compiled_sql()))
     results.append(("Compatibility fn is no-op", test_ensure_postgresql_compatibilities_is_noop()))
     results.append(("No UUID import in models", test_no_uuid_import_in_models()))
+    results.append(("Role/Profile UUID Coercion Test", test_profile_role_uuid_coercion()))
 
     print("\n" + "=" * 60)
     print("Results:")
