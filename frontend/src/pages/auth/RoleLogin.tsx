@@ -114,6 +114,8 @@ export const RoleLogin: React.FC<RoleLoginConfig> = (cfg) => {
       }
     }
 
+    let timeoutId: any;
+
     try {
       const loginPayload: any = { email, password, remember_me: rememberMe };
       if (publicSettings.captcha_enabled) {
@@ -122,9 +124,9 @@ export const RoleLogin: React.FC<RoleLoginConfig> = (cfg) => {
       }
 
       // Implementing Request Timeout manually since loginFn is abstract
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('TIMEOUT')), 60000)
-      );
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error('TIMEOUT')), 60000);
+      });
 
       const res: any = await Promise.race([
         cfg.loginFn(loginPayload),
@@ -169,6 +171,9 @@ export const RoleLogin: React.FC<RoleLoginConfig> = (cfg) => {
         setCaptchaEntered('');
       }
     } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       setIsLoading(false);
     }
   };
