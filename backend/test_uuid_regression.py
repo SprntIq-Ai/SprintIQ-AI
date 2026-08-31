@@ -203,6 +203,38 @@ def test_developer_projects_uuid_coercion():
         session.close()
 
 
+def test_sprint_id_uuid_coercion():
+    """Verify that compiling query with Sprint.id == uuid.UUID object
+    with PostgreSQL dialect binds the UUID as a string representation
+    and contains no ::uuid cast in SQL.
+    """
+    from sqlalchemy.orm import Session
+    import uuid
+    from app.models.domain import Sprint
+    from sqlalchemy.dialects import postgresql as pg_dialect
+
+    uuid_val = uuid.UUID("5d90fee4-0dd7-4b2a-a805-fa123fe44387")
+
+    # Compile Sprint.id == uuid_val using PostgreSQL dialect
+    query = Session().query(Sprint).filter(Sprint.id == uuid_val)
+    dialect = pg_dialect.dialect()
+    compiled = query.statement.compile(dialect=dialect)
+    sql_str = str(compiled)
+
+    # Verify no ::uuid cast exists
+    assert "::uuid" not in sql_str.lower(), f"Compiled Sprint query contains ::uuid cast: {sql_str}"
+
+    # Check bind parameter processor for Sprint.id
+    bind_processor = Sprint.id.type.bind_processor(dialect)
+    assert bind_processor is not None, "Sprint.id must supply a bind parameter processor"
+    processed_param = bind_processor(uuid_val)
+    assert isinstance(processed_param, str), f"Expected processed parameter to be string, got {type(processed_param)}"
+    assert processed_param == "5d90fee4-0dd7-4b2a-a805-fa123fe44387"
+
+    print("PASS: test_sprint_id_uuid_coercion verification passed successfully.")
+    return True
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print("UUID -> String(36) Regression Tests")
@@ -215,6 +247,7 @@ if __name__ == "__main__":
     results.append(("No UUID import in models", test_no_uuid_import_in_models()))
     results.append(("Role/Profile UUID Coercion Test", test_profile_role_uuid_coercion()))
     results.append(("Developer Projects UUID Coercion Test", test_developer_projects_uuid_coercion()))
+    results.append(("Sprint ID UUID Coercion Test", test_sprint_id_uuid_coercion()))
 
     print("\n" + "=" * 60)
     print("Results:")
