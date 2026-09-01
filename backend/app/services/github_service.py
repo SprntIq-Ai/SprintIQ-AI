@@ -87,6 +87,7 @@ def _github_installation_token() -> Optional[str]:
     installation_id = (settings.GITHUB_APP_INSTALLATION_ID or "").strip()
     jwt_token = _github_app_jwt()
     if not installation_id or not jwt_token:
+        print(f"[GitHub App Auth] Missing installation_id or jwt_token (installation_id={bool(installation_id)}, jwt_token={bool(jwt_token)})")
         return None
     headers = {
         "Authorization": f"Bearer {jwt_token}",
@@ -110,9 +111,14 @@ def _github_installation_token() -> Optional[str]:
                     except Exception:
                         _install_token_cache["expires_at"] = 0
                 return _install_token_cache["token"]
-    except Exception:
+            else:
+                print(f"[GitHub App Auth Failed] Status: {resp.status_code}. Response: {resp.text}")
+    except Exception as e:
+        import traceback
+        print(f"[GitHub App Auth Exception] Failed: {e}\n{traceback.format_exc()}")
         return None
     return None
+
 
 
 def get_server_headers() -> dict:
@@ -214,8 +220,11 @@ def check_repository_on_github(headers: dict, owner: str, repo: str) -> dict:
                 return {"status": "RATE_LIMIT", "exists": False, "repository": None}
             if "blocked" in msg or "private" in msg or "not accessible" in msg:
                 return {"status": "PRIVATE", "exists": False, "repository": None}
+        print(f"[GitHub API Error] check_repository_on_github failed for {owner}/{repo}: Status {resp.status_code}, Response: {resp.text}")
         return {"status": "UNAVAILABLE", "exists": False, "repository": None, "error": f"GitHub API error: {resp.status_code}"}
     except Exception as e:
+        import traceback
+        print(f"[GitHub API Exception] check_repository_on_github raised for {owner}/{repo}: {e}\n{traceback.format_exc()}")
         return {"status": "UNAVAILABLE", "exists": False, "repository": None, "error": str(e)}
 
 
@@ -873,6 +882,9 @@ def sync_github_repository(db: Session, project_id: str, repo_owner: str, repo_n
             }
     except Exception as e:
         db.rollback()
+        import traceback
+        tb = traceback.format_exc()
+        print(f"[GitHub Sync Exception] Failed during synchronization: {e}\n{tb}")
         if db_repo:
             db_repo.sync_status = "FAILED"
             db_repo.last_sync_error = SYNC_UNAVAILABLE_MESSAGE

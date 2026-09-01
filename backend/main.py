@@ -464,13 +464,20 @@ def on_startup():
         # 2. Schema compatibility audit (for PostgreSQL)
         print("[Database] Auditing PostgreSQL schema types...")
         ensure_postgresql_compatibilities(db)
+
+        # 3. Tables alignment with custom additions
+        print("[Database] Ensuring github schema additions...")
+        from app.core.database import ensure_github_schema
+        ensure_github_schema(db)
+        # Note: ensure_task_review_schema is intentionally disabled to strictly prevent
+        # automatic production data modification (data mutation backfills) on startup.
         
-        # 3. Table creation
+        # 4. Table creation
         print("[Database] Creating missing tables via SQLAlchemy...")
         Base.metadata.create_all(bind=engine)
         print("[Database] Table mapping updated successfully")
         
-        # 2. Run migrations (Alembic)
+        # 5. Run migrations (Alembic)
         print("[Database] Running Alembic migrations...")
         import alembic.config
         import alembic.command
