@@ -286,29 +286,57 @@ export const GitHubEngineeringAnalytics: React.FC = () => {
     toastTimer.current = window.setTimeout(() => setToast(null), 4000);
   }, []);
 
-  // Load projects; auto-select the first project that has a connected repository.
+  const fetchAndEnrichProjects = useCallback(async (isInitial = false) => {
+    try {
+      const projsResponse = await githubService.getProjects();
+      let reposResponse: any = null;
+
+      try {
+        reposResponse = await githubService.getRepositories({ page_size: 100 });
+      } catch {
+        // Fallback to project.repositories if getRepositories fails
+      }
+
+      const repoMap = new Map();
+      if (reposResponse?.items) {
+        reposResponse.items.forEach((r: any) => {
+          if (!repoMap.has(r.project_id)) repoMap.set(r.project_id, []);
+          repoMap.get(r.project_id).push(r);
+        });
+      }
+
+      const enrichedProjects = projsResponse.map((p: any) => ({
+        ...p,
+        repositories: repoMap.get(p.id) ?? p.repositories ?? []
+      }));
+
+      setProjects(enrichedProjects);
+
+      if (isInitial && !initialAutoSelect) {
+        setSelectedProjectIds([]);
+        setInitialAutoSelect(true);
+      }
+    } catch {
+      if (isInitial) {
+        showToast('error', 'Failed to load projects.');
+      }
+    } finally {
+      if (isInitial) {
+        setProjectsLoading(false);
+      }
+    }
+  }, [initialAutoSelect, showToast]);
+
+  // Load projects and repositories on mount
   useEffect(() => {
     let cancelled = false;
-    githubService.getProjects()
-      .then((data) => {
-        if (cancelled) return;
-        setProjects(data);
-        setProjectsLoading(false);
-        if (!initialAutoSelect) {
-          const firstWithRepo = data.find((p) => p.repositories.length > 0);
-          if (firstWithRepo) setSelectedProjectIds([firstWithRepo.id]);
-          setInitialAutoSelect(true);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setProjectsLoading(false);
-          showToast('error', 'Failed to load projects.');
-        }
-      });
+    setProjectsLoading(true);
+    fetchAndEnrichProjects(true).then(() => {
+      if (cancelled) return;
+    });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchAndEnrichProjects]);
 
   // Fetch live activity (repo overview + metrics + branches + PRs + issues).
   const fetchActivity = useCallback(async (opts?: { silent?: boolean; force?: boolean }) => {
@@ -420,15 +448,8 @@ export const GitHubEngineeringAnalytics: React.FC = () => {
   }, [projects]);
 
   const refreshProjects = useCallback(async () => {
-    try {
-      const projs = await githubService.getProjects();
-      setProjects(projs);
-      if (projs.length > 0 && selectedProjectIds.length === 0) {
-        const firstWithRepo = projs.find((p) => p.repositories.length > 0);
-        if (firstWithRepo) setSelectedProjectIds([firstWithRepo.id]);
-      }
-    } catch { /* non-fatal */ }
-  }, [selectedProjectIds.length]);
+    await fetchAndEnrichProjects(false);
+  }, [fetchAndEnrichProjects]);
 
   const status = liveActivity?.status;
   const repo = liveActivity?.repository as GitHubLiveRepository | undefined;
@@ -494,7 +515,10 @@ export const GitHubEngineeringAnalytics: React.FC = () => {
                 className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${selectedProjectIds.length === 0 ? 'role-tab-active' : 'role-tab-inactive'}`}
                 onClick={handleSelectAll}
               >
-                All
+                All {(() => {
+                  const c = projects.reduce((acc, p) => acc + p.repositories.length, 0);
+                  return c > 0 ? `(${c})` : '';
+                })()}
               </button>
               {projects.map((p) => {
                 const active = selectedProjectIds.length === 1 && selectedProjectIds[0] === p.id;
@@ -515,21 +539,74 @@ export const GitHubEngineeringAnalytics: React.FC = () => {
       </GlassCard>
 
       {!activeProjectId && (
-        <GlassCard className="!p-12">
-          <div className="flex flex-col items-center text-center">
-            <div className="p-4 rounded-2xl mb-4" style={{ background: 'var(--role-bg-subtle)', color: 'var(--role-primary)' }}>
-              <FolderKanban className="w-8 h-8" />
-            </div>
-            <p className="text-sm font-semibold" style={{ color: 'var(--role-text-heading)' }}>
-              Select a project to view live GitHub data.
-            </p>
-            <p className="text-xs mt-1" style={{ color: 'var(--role-text-muted)' }}>
-              {projects.filter((p) => p.repositories.length > 0).length === 0
-                ? 'No projects have a connected GitHub repository yet.'
-                : 'Choose a project above to see its real-time commits, branches, pull requests and issues.'}
-            </p>
-          </div>
-        </GlassCard>
+        <>
+          {(() => {
+            const allConnectedRepos = projects.flatMap(p => p.repositories.map(r => ({ ...r, projectId: p.id, projectName: p.name })));
+
+            if (projectsLoading) {
+              return (
+                <GlassCard className="!p-12">
+                  <div className="flex justify-center"><RefreshCw className="w-8 h-8 animate-spin text-slate-400" /></div>
+                </GlassCard>
+              );
+            }
+
+            if (allConnectedRepos.length === 0) {
+              return (
+                <GlassCard className="!p-12">
+                  <div className="flex flex-col items-center text-center">
+                    <div className="p-4 rounded-2xl mb-4" style={{ background: 'var(--role-bg-subtle)', color: 'var(--role-primary)' }}>
+                      <FolderKanban className="w-8 h-8" />
+                    </div>
+                    <p className="text-sm font-semibold" style={{ color: 'var(--role-text-heading)' }}>
+                      No projects have a connected GitHub repository yet.
+                    </p>
+                    <p className="text-xs mt-1" style={{ color: 'var(--role-text-muted)' }}>
+                      Click "Connect Repository" to integrate a GitHub repository with one of your projects.
+                    </p>
+                  </div>
+                </GlassCard>
+              );
+            }
+
+            return (
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                {allConnectedRepos.map((repo: any) => (
+                  <SectionCard
+                    key={repo.id}
+                    title="Repository Overview"
+                    icon={<FileCode2 className="w-4 h-4" />}
+                    action={
+                      <Button variant="outline" size="sm" onClick={() => handleSelectProject(repo.projectId)}>
+                        View Live Analytics
+                      </Button>
+                    }
+                  >
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="text-lg font-extrabold" style={{ color: 'var(--role-text-heading)' }}>{repo.repo_name}</h4>
+                        <Badge variant={repo.visibility === 'private' ? 'critical' : 'healthy'}>{repo.visibility}</Badge>
+                        <Badge variant="role">{repo.projectName}</Badge>
+                      </div>
+                      {repo.description && (
+                        <p className="text-sm" style={{ color: 'var(--role-text-muted)' }}>{repo.description}</p>
+                      )}
+                      <p className="text-xs font-medium" style={{ color: 'var(--role-text-muted)' }}>
+                        <span className="role-muted">Owner:</span> {repo.full_name || `${repo.owner}/${repo.repo_name}`} ·{' '}
+                        <span className="role-muted">Default branch:</span> <code className="font-mono">{repo.default_branch || 'main'}</code>
+                      </p>
+                      <div className="flex items-center gap-4 mt-1 flex-wrap text-xs font-semibold" style={{ color: 'var(--role-text-muted)' }}>
+                        <span className="inline-flex items-center gap-1"><CircleAlert className="w-3.5 h-3.5" /> {fmtNum(repo.open_issues_count)} issues</span>
+                        <span className="inline-flex items-center gap-1"><GitPullRequest className="w-3.5 h-3.5" /> {fmtNum(repo.open_prs_count)} pull requests</span>
+                        {repo.last_synced_at && <span className="inline-flex items-center gap-1"><Clock4 className="w-3.5 h-3.5" /> Synced {fmtRelative(repo.last_synced_at)}</span>}
+                      </div>
+                    </div>
+                  </SectionCard>
+                ))}
+              </div>
+            );
+          })()}
+        </>
       )}
 
       {activeProjectId && (
