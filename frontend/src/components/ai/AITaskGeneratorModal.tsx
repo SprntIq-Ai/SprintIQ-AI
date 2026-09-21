@@ -4,6 +4,7 @@ import { Button } from '../common/Button';
 import { Sparkles, CheckCircle2, Clock, AlertCircle, Loader2 } from 'lucide-react';
 import { aiService, taskService, projectService, managerService } from '../../services/api';
 import { AITaskDetails } from '../../types';
+import { formatApiErrorMessage } from '../../utils/apiErrors';
 
 interface AITaskGeneratorModalProps {
   isOpen: boolean;
@@ -93,13 +94,19 @@ export const AITaskGeneratorModal: React.FC<AITaskGeneratorModalProps> = ({
         return;
       }
 
+      const acList = Array.isArray(aiDetails.acceptance_criteria)
+        ? aiDetails.acceptance_criteria.join('\n- ')
+        : (aiDetails.acceptance_criteria || 'Feature implemented and verified.');
+      const techNotes = aiDetails.technical_notes || 'Clean implementation conforming to architectural guidelines.';
+      const desc = `${aiDetails.description || title}\n\nAcceptance Criteria:\n- ${acList}\n\nTechnical Notes: ${techNotes}`;
+
       await taskService.create({
         title: aiDetails.title || title,
-        description: `${aiDetails.description}\n\nAcceptance Criteria:\n- ${aiDetails.acceptance_criteria.join('\n- ')}\n\nTechnical Notes: ${aiDetails.technical_notes}`,
-        priority: aiDetails.priority,
+        description: desc,
+        priority: aiDetails.priority || 'MEDIUM',
         project_id: pid,
-        estimated_hours: aiDetails.estimated_hours,
-        story_points: aiDetails.story_points,
+        estimated_hours: Number(aiDetails.estimated_hours) || 8.0,
+        story_points: Number(aiDetails.story_points) || 3,
         use_active_sprint: true
       });
       setSuccess('AI task added to backlog successfully.');
@@ -110,12 +117,8 @@ export const AITaskGeneratorModal: React.FC<AITaskGeneratorModalProps> = ({
         if (onTaskCreated) onTaskCreated();
       }, 1200);
     } catch (e: any) {
-      const detail = e?.response?.data?.detail;
-      const msg = Array.isArray(detail)
-        ? detail.map((d: any) => `${d.loc?.join('.')}: ${d.msg}`).join('; ')
-        : detail || 'Failed to create task';
-      console.error('Create AI task error:', e?.response?.status, msg);
-      setError(msg);
+      console.error('Create AI task error:', e);
+      setError(formatApiErrorMessage(e, 'Failed to create task'));
     } finally {
       setIsSaving(false);
     }

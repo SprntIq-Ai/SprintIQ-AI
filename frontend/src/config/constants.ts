@@ -5,12 +5,6 @@ const getRawApiUrl = (): string => {
   if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
     return envUrl.trim();
   }
-  if (typeof window !== 'undefined') {
-    const host = window.location.hostname;
-    if (host.includes('vercel.app') || (host !== 'localhost' && host !== '127.0.0.1')) {
-      return 'https://sprintiq-ai.onrender.com/api';
-    }
-  }
   return '/api';
 };
 

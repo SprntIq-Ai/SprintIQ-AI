@@ -6,6 +6,7 @@ import { Modal } from '../../components/common/Modal';
 import { sprintService, managerService, projectService, taskService, aiService } from '../../services/api';
 import { Sprint, Project, AISprintPlan } from '../../types';
 import { Layers, Plus, Calendar, Target, CheckCircle2, Sparkles, UserCheck, Flame, FolderKanban } from 'lucide-react';
+import { formatApiErrorMessage } from '../../utils/apiErrors';
 
 export const SprintPlanner: React.FC = () => {
   const [sprints, setSprints] = useState<Sprint[]>([]);
@@ -122,11 +123,8 @@ export const SprintPlanner: React.FC = () => {
       setManualError(null);
       loadData();
     } catch (err: any) {
-      const detail = err?.response?.data?.detail;
-      const msg = Array.isArray(detail)
-        ? detail.map((d: any) => `${d.loc?.join('.')}: ${d.msg}`).join('; ')
-        : (detail || err.message || "Failed to create sprint.");
-      setManualError(msg);
+      console.error('Create sprint error:', err);
+      setManualError(formatApiErrorMessage(err, 'Failed to create sprint.'));
     } finally {
       setIsSubmittingManual(false);
     }
@@ -195,11 +193,8 @@ export const SprintPlanner: React.FC = () => {
       setAiPlan(null);
       loadData();
     } catch (e: any) {
-      const detail = e?.response?.data?.detail;
-      const msg = Array.isArray(detail)
-        ? detail.map((d: any) => `${d.loc?.join('.')}: ${d.msg}`).join('; ')
-        : (detail || e.message || "Failed to apply AI Sprint");
-      setAiError(msg);
+      console.error('Apply AI sprint error:', e);
+      setAiError(formatApiErrorMessage(e, 'Failed to apply AI Sprint'));
     } finally {
       setIsApplyingAi(false);
     }
@@ -312,6 +307,11 @@ export const SprintPlanner: React.FC = () => {
       {/* Manual Sprint Modal */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Create New Sprint">
         <form onSubmit={handleCreateSprint} className="space-y-4">
+          {manualError && (
+            <div className="p-3 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl text-xs">
+              {manualError}
+            </div>
+          )}
           <div>
             <label className="block text-xs font-semibold text-slate-600 mb-1">Target Project</label>
             <select

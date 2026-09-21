@@ -9,7 +9,8 @@ import { GlassCard } from '../../components/common/GlassCard';
 import { Badge } from '../../components/common/Badge';
 import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
-import { githubService } from '../../services/api';
+import { githubService, emitDataMutation } from '../../services/api';
+import { formatApiErrorMessage } from '../../utils/apiErrors';
 import { useAuth } from '../../contexts/AuthContext';
 import { InitialsAvatar } from '../../components/common/InitialsAvatar';
 import {
@@ -851,8 +852,14 @@ export const GitHubEngineeringAnalytics: React.FC = () => {
   );
 };
 
-const isValidGithubUrl = (url: string) =>
-  /^(https?:\/\/)?(www\.)?github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+(\.git)?\/?$/.test(url.trim());
+const isValidGithubUrl = (url: string) => {
+  const trimmed = url.trim();
+  if (!trimmed) return false;
+  return (
+    /^(https?:\/\/)?(www\.)?github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+(\.git)?\/?$/i.test(trimmed) ||
+    /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+(\.git)?\/?$/i.test(trimmed)
+  );
+};
 
 const RepositoryForm: React.FC<{
   projects: GitHubProjectInfo[];
@@ -870,14 +877,15 @@ const RepositoryForm: React.FC<{
 
   const check = async () => {
     if (!projectId) { onError('Select a project first.'); return; }
-    if (!isValidGithubUrl(url)) { onError('Please enter a valid GitHub repository URL.'); return; }
+    if (!isValidGithubUrl(url)) { onError('Please enter a valid GitHub repository URL (e.g. https://github.com/owner/repo or owner/repo).'); return; }
     setChecking(true);
     setCheckResult(null);
     try {
       const res = await githubService.checkRepository({ project_id: projectId, repository_url: url.trim() });
       setCheckResult({ exists: res.exists, message: res.message, owner: res.owner, repo_name: res.repo_name });
     } catch (e: any) {
-      onError(e?.response?.data?.detail || 'Unable to check repository.');
+      console.error('Check repository error:', e);
+      onError(formatApiErrorMessage(e, 'Unable to check repository.'));
     } finally {
       setChecking(false);
     }
@@ -889,10 +897,13 @@ const RepositoryForm: React.FC<{
     setConnecting(true);
     try {
       const res = await githubService.connectRepository({ project_id: projectId, repository_url: url.trim() });
+      emitDataMutation('github');
+      emitDataMutation('projects');
       onSuccess(res.message || 'Repository connected successfully.');
       onSaved();
     } catch (e: any) {
-      onError(e?.response?.data?.detail || 'Failed to connect repository.');
+      console.error('Connect repository error:', e);
+      onError(formatApiErrorMessage(e, 'Failed to connect repository.'));
     } finally {
       setConnecting(false);
     }

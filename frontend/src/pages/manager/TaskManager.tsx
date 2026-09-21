@@ -10,6 +10,7 @@ import { Task } from '../../types';
 import { Plus, ListTodo, Trash2, Sparkles, CheckCircle2, AlertTriangle, FolderKanban, CalendarClock } from 'lucide-react';
 
 import { AITaskGeneratorModal } from '../../components/ai/AITaskGeneratorModal';
+import { formatApiErrorMessage } from '../../utils/apiErrors';
 
 interface ManagerProject {
   id: string;
@@ -185,12 +186,8 @@ export const TaskManager: React.FC = () => {
       loadAll();
       if (projectId) loadSprints(projectId);
     } catch (e: any) {
-      const detail = e.response?.data?.detail;
-      const msg = Array.isArray(detail)
-        ? detail.map((d: any) => `${d.loc ? d.loc.join('.') + ': ' : ''}${d.msg}`).join('; ')
-        : detail || e.message || 'Unknown error';
-      console.error(e);
-      showToast('error', `Failed to create task: ${msg}`);
+      console.error('Create task error:', e);
+      showToast('error', formatApiErrorMessage(e, 'Failed to create task'));
     } finally {
       setIsSubmitting(false);
     }
