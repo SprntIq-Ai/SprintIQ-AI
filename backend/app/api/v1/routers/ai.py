@@ -203,7 +203,8 @@ def plan_sprint_with_ai(req: Dict[str, Any], db: Session = Depends(get_db), curr
     project = db.query(Project).filter(Project.id == req.get("project_id")).first() if req.get("project_id") else db.query(Project).first()
     p_name = project.name if project else "SprintIQ AI Platform"
     focus = req.get("target_focus", "Velocity")
-    return AIService.generate_sprint_plan(project_name=p_name, target_focus=focus)
+    start_date = req.get("start_date")
+    return AIService.generate_sprint_plan(project_name=p_name, target_focus=focus, start_date=start_date)
 
 @router.post("/task-generator")
 def generate_task_with_ai(req: Dict[str, Any], db: Session = Depends(get_db), current_user: Profile = Depends(get_current_user)):

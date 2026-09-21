@@ -71,24 +71,14 @@ export const TaskManager: React.FC = () => {
     window.setTimeout(() => setToast(null), 5000);
   }, []);
 
-  const loadProjects = useCallback(async () => {
-    setLoadingProjects(true);
-    try {
-      const pList = await managerService.getProjects();
-      setProjects(pList);
-      if (pList.length > 0 && !projectId) setProjectId(pList[0].id);
-    } catch (e: any) {
-      console.error(e);
-      showToast('error', 'Failed to load projects: ' + (e.response?.data?.detail || e.message || 'Unknown error'));
-    } finally {
-      setLoadingProjects(false);
-    }
-  }, [projectId, showToast]);
-
   const loadSprints = useCallback(async (pid: string) => {
+    if (!pid) {
+      setSprints([]);
+      return;
+    }
     setLoadingSprints(true);
     try {
-      const sList = await sprintService.getAll(pid || undefined);
+      const sList = await sprintService.getAll(pid);
       setSprints(sList);
     } catch (e: any) {
       console.error(e);
@@ -98,6 +88,26 @@ export const TaskManager: React.FC = () => {
       setLoadingSprints(false);
     }
   }, [showToast]);
+
+  const loadProjects = useCallback(async () => {
+    setLoadingProjects(true);
+    try {
+      const pList = await managerService.getProjects();
+      setProjects(pList);
+      if (pList.length > 0) {
+        setProjectId((prev) => {
+          const selected = prev || pList[0].id;
+          loadSprints(selected);
+          return selected;
+        });
+      }
+    } catch (e: any) {
+      console.error(e);
+      showToast('error', 'Failed to load projects: ' + (e.response?.data?.detail || e.message || 'Unknown error'));
+    } finally {
+      setLoadingProjects(false);
+    }
+  }, [showToast, loadSprints]);
 
   const loadDevelopers = useCallback(async () => {
     setLoadingDevelopers(true);
@@ -127,7 +137,6 @@ export const TaskManager: React.FC = () => {
 
   useEffect(() => {
     loadProjects();
-    loadSprints('');
     loadDevelopers();
     loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -177,7 +186,9 @@ export const TaskManager: React.FC = () => {
       if (projectId) loadSprints(projectId);
     } catch (e: any) {
       const detail = e.response?.data?.detail;
-      const msg = detail || e.message || 'Unknown error';
+      const msg = Array.isArray(detail)
+        ? detail.map((d: any) => `${d.loc ? d.loc.join('.') + ': ' : ''}${d.msg}`).join('; ')
+        : detail || e.message || 'Unknown error';
       console.error(e);
       showToast('error', `Failed to create task: ${msg}`);
     } finally {
@@ -204,12 +215,22 @@ export const TaskManager: React.FC = () => {
     icon: <FolderKanban className="w-4 h-4" />,
   }));
 
-  const sprintOptions = sprints.map((s) => ({
-    value: s.id,
-    label: s.name,
-    meta: s.status,
-    icon: <CalendarClock className="w-4 h-4" />,
-  }));
+  const sprintOptions = [
+    {
+      value: '',
+      label: 'No Sprint (Backlog)',
+      meta: 'Backlog',
+      icon: <CalendarClock className="w-4 h-4" />,
+    },
+    ...sprints
+      .filter((s) => !projectId || s.project_id === projectId)
+      .map((s) => ({
+        value: s.id,
+        label: s.name,
+        meta: s.status,
+        icon: <CalendarClock className="w-4 h-4" />,
+      })),
+  ];
 
   const developerOptions = developers.map((d) => ({
     value: d.id,

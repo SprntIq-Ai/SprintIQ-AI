@@ -20,10 +20,23 @@ def _parse_date(d):
     if isinstance(d, datetime):
         return d.date()
     if isinstance(d, str):
+        d_clean = d.strip().split("T")[0]
+        # Format 1: YYYY-MM-DD
         try:
-            return datetime.strptime(d.split("T")[0], "%Y-%m-%d").date()
+            return datetime.strptime(d_clean, "%Y-%m-%d").date()
         except Exception:
-            return None
+            pass
+        # Format 2: DD-MM-YYYY
+        try:
+            return datetime.strptime(d_clean, "%d-%m-%Y").date()
+        except Exception:
+            pass
+        # Format 3: MM/DD/YYYY, DD/MM/YYYY, YYYY/MM/DD
+        for fmt in ("%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d"):
+            try:
+                return datetime.strptime(d_clean, fmt).date()
+            except Exception:
+                pass
     return None
 
 
@@ -136,7 +149,11 @@ def create_sprint(req: SprintCreate, db: Session = Depends(get_db), current_user
 
     s_start = _parse_date(req.start_date)
     s_end = _parse_date(req.end_date)
-    if s_start and s_end and s_end < s_start:
+    if not s_start:
+        raise HTTPException(status_code=400, detail="Start date is required and must be a valid date format (e.g. YYYY-MM-DD or DD-MM-YYYY).")
+    if not s_end:
+        raise HTTPException(status_code=400, detail="End date is required and must be a valid date format (e.g. YYYY-MM-DD or DD-MM-YYYY).")
+    if s_end < s_start:
         raise HTTPException(status_code=400, detail="End date must be on or after start date.")
 
     sprint = Sprint(

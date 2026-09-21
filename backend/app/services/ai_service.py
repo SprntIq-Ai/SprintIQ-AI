@@ -214,19 +214,41 @@ class AIService:
         }
 
     @classmethod
-    def generate_sprint_plan(cls, project_name: str, target_focus: str = "Velocity") -> Dict[str, Any]:
+    def generate_sprint_plan(cls, project_name: str, target_focus: str = "Velocity", start_date: Any = None) -> Dict[str, Any]:
         """Generates AI suggested sprint goal, recommended tasks, story points, duration, devs, and workload."""
+        today = datetime.utcnow().date()
+        if start_date:
+            if isinstance(start_date, str):
+                try:
+                    today = datetime.strptime(start_date.split("T")[0], "%Y-%m-%d").date()
+                except Exception:
+                    try:
+                        today = datetime.strptime(start_date.split("T")[0], "%d-%m-%Y").date()
+                    except Exception:
+                        today = datetime.utcnow().date()
+            elif isinstance(start_date, datetime):
+                today = start_date.date()
+            elif hasattr(start_date, 'year'):
+                today = start_date
+
+        start_date_str = today.isoformat()
+        default_completion_str = (today + timedelta(days=14)).isoformat()
+
         prompt = f"""
         Create an optimal 2-week Agile sprint plan for software project:
         Project: "{project_name}"
         Focus Area: "{target_focus}"
+        Current Application Date / Sprint Start Date: {start_date_str}
+        Target Duration: 2 weeks (14 days)
+        Target End Date: {default_completion_str}
 
+        CRITICAL: All dates must be in the current year ({today.year}). Never use past years like 2023.
         Provide JSON output with keys:
         - goal (string)
-        - duration_weeks (integer)
+        - duration_weeks (integer, default 2)
         - recommended_tasks (list of dicts with keys: title, story_points, estimated_hours, priority)
         - total_story_points (integer)
-        - estimated_completion_date (string ISO date)
+        - estimated_completion_date (string ISO date YYYY-MM-DD on or after {start_date_str})
         - recommended_developers (list of strings)
         - workload_distribution (dict of dev_name: story_points)
         """
@@ -236,33 +258,61 @@ class AIService:
                 gemini_res = gemini_generate(prompt)
             except Exception as e:
                 print(f"[AIService] gemini_generate fallback failed: {e}")
+
+        plan_data = None
         if gemini_res:
             try:
                 clean_json = gemini_res.replace("```json", "").replace("```", "").strip()
-                return json.loads(clean_json)
+                parsed = json.loads(clean_json)
+                if isinstance(parsed, dict) and "goal" in parsed:
+                    plan_data = parsed
             except Exception:
                 pass
 
-        completion_date = (datetime.utcnow().date() + timedelta(days=14)).isoformat()
-        return {
-            "goal": f"Deliver core intelligence modules, API endpoints, and role-based UX enhancements for {project_name}.",
-            "duration_weeks": 2,
-            "recommended_tasks": [
-                {"title": "Implement Gemini Risk Scoring Engine", "story_points": 8, "estimated_hours": 16.0, "priority": "HIGH"},
-                {"title": "Role-Based Palette Styling & Dark Theme", "story_points": 5, "estimated_hours": 10.0, "priority": "MEDIUM"},
-                {"title": "Export Engine for PDF and Excel Reports", "story_points": 5, "estimated_hours": 12.0, "priority": "HIGH"},
-                {"title": "Interactive Gantt Timeline Component", "story_points": 8, "estimated_hours": 16.0, "priority": "MEDIUM"},
-                {"title": "Developer Focus Session & Leaderboard", "story_points": 3, "estimated_hours": 6.0, "priority": "LOW"}
-            ],
-            "total_story_points": 29,
-            "estimated_completion_date": completion_date,
-            "recommended_developers": ["Michael Chen (Dev)", "Sarah Jenkins (PM)", "Alex Vance (Admin)"],
-            "workload_distribution": {
-                "Michael Chen (Dev)": 16,
-                "Sarah Jenkins (PM)": 8,
-                "Alex Vance (Admin)": 5
+        if not plan_data:
+            plan_data = {
+                "goal": f"Deliver core intelligence modules, API endpoints, and role-based UX enhancements for {project_name}.",
+                "duration_weeks": 2,
+                "recommended_tasks": [
+                    {"title": "Implement Gemini Risk Scoring Engine", "story_points": 8, "estimated_hours": 16.0, "priority": "HIGH"},
+                    {"title": "Role-Based Palette Styling & Dark Theme", "story_points": 5, "estimated_hours": 10.0, "priority": "MEDIUM"},
+                    {"title": "Export Engine for PDF and Excel Reports", "story_points": 5, "estimated_hours": 12.0, "priority": "HIGH"},
+                    {"title": "Interactive Gantt Timeline Component", "story_points": 8, "estimated_hours": 16.0, "priority": "MEDIUM"},
+                    {"title": "Developer Focus Session & Leaderboard", "story_points": 3, "estimated_hours": 6.0, "priority": "LOW"}
+                ],
+                "total_story_points": 29,
+                "recommended_developers": ["Michael Chen (Dev)", "Sarah Jenkins (PM)", "Alex Vance (Admin)"],
+                "workload_distribution": {
+                    "Michael Chen (Dev)": 16,
+                    "Sarah Jenkins (PM)": 8,
+                    "Alex Vance (Admin)": 5
+                }
             }
-        }
+
+        # Normalize duration and dates authoritatively
+        duration_weeks = max(int(plan_data.get("duration_weeks") or 2), 1)
+        plan_data["duration_weeks"] = duration_weeks
+        plan_data["start_date"] = start_date_str
+
+        # Authoritative computed completion date: start_date + duration_weeks * 7
+        computed_completion = (today + timedelta(days=duration_weeks * 7)).isoformat()
+        ai_comp_date_str = plan_data.get("estimated_completion_date")
+
+        valid_ai_date = False
+        if ai_comp_date_str and isinstance(ai_comp_date_str, str):
+            try:
+                d_obj = datetime.strptime(ai_comp_date_str.split("T")[0], "%Y-%m-%d").date()
+                if d_obj >= today and d_obj.year >= today.year:
+                    valid_ai_date = True
+                    plan_data["estimated_completion_date"] = d_obj.isoformat()
+            except Exception:
+                pass
+
+        if not valid_ai_date:
+            plan_data["estimated_completion_date"] = computed_completion
+
+        plan_data["end_date"] = plan_data["estimated_completion_date"]
+        return plan_data
 
     @classmethod
     def generate_daily_standup(cls, project_name: str = "SprintIQ AI") -> Dict[str, Any]:

@@ -176,7 +176,10 @@ def parse_github_url(url: str):
     parts = [p for p in s.split("/") if p]
     if len(parts) < 2:
         raise ValueError(INVALID_URL_MESSAGE)
-    owner, repo = parts[0], parts[1].rstrip(".git")
+    repo_part = parts[1]
+    if repo_part.endswith(".git"):
+        repo_part = repo_part[:-4]
+    owner, repo = parts[0], repo_part
     if not _GITHUB_OWNER_RE.fullmatch(owner) or not _GITHUB_REPO_RE.fullmatch(repo) or repo in (".", ".."):
         raise ValueError(INVALID_URL_MESSAGE)
     return owner, repo
@@ -205,6 +208,12 @@ def check_repository_on_github(headers: dict, owner: str, repo: str) -> dict:
     try:
         with httpx.Client(timeout=20.0) as client:
             resp = client.get(f"{GITHUB_API}/repos/{owner}/{repo}", headers=headers)
+            # If server token returned 401 or 404, check unauthenticated for public repositories
+            if resp.status_code in (401, 404) and headers.get("Authorization"):
+                pub_headers = {"Accept": "application/vnd.github+json", "User-Agent": "SprintIQ-AI"}
+                pub_resp = client.get(f"{GITHUB_API}/repos/{owner}/{repo}", headers=pub_headers)
+                if pub_resp.status_code == 200:
+                    resp = pub_resp
         if resp.status_code == 200:
             return {"status": "FOUND", "exists": True, "repository": _repo_payload(resp.json())}
         if resp.status_code == 404:
@@ -739,6 +748,12 @@ def sync_github_repository(db: Session, project_id: str, repo_owner: str, repo_n
     try:
         with httpx.Client(timeout=20.0) as client:
             repo_resp = client.get(repo_url, headers=headers)
+            if repo_resp.status_code in (401, 404) and headers.get("Authorization"):
+                pub_headers = {"Accept": "application/vnd.github+json", "User-Agent": "SprintIQ-AI"}
+                pub_resp = client.get(repo_url, headers=pub_headers)
+                if pub_resp.status_code == 200:
+                    repo_resp = pub_resp
+                    headers = pub_headers
             if repo_resp.status_code in (401, 403, 404, 410):
                 return _unavailable(repo_resp.status_code, (repo_resp.json() or {}).get("message"))
             if repo_resp.status_code != 200:

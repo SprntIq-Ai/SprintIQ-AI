@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, date
 
 from app.core.database import get_db
 from app.models.domain import Task, Profile, Project, Sprint, TaskAttachment, Comment
@@ -10,6 +10,32 @@ from app.api.deps import get_current_user
 from app.services.notification_service import NotificationService
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
+
+def _parse_task_date(d):
+    if d is None:
+        return None
+    if isinstance(d, date):
+        return d
+    if isinstance(d, datetime):
+        return d.date()
+    if isinstance(d, str):
+        d_clean = d.strip().split("T")[0]
+        # YYYY-MM-DD
+        try:
+            return datetime.strptime(d_clean, "%Y-%m-%d").date()
+        except Exception:
+            pass
+        # DD-MM-YYYY
+        try:
+            return datetime.strptime(d_clean, "%d-%m-%Y").date()
+        except Exception:
+            pass
+        for fmt in ("%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d"):
+            try:
+                return datetime.strptime(d_clean, fmt).date()
+            except Exception:
+                pass
+    return None
 
 @router.get("", response_model=List[TaskResponse])
 def get_tasks(
@@ -132,16 +158,19 @@ def create_task(req: TaskCreate, db: Session = Depends(get_db), current_user: Pr
                 detail=f"Selected sprint '{sprint.name}' does not belong to project '{project.name}'. Choose a sprint from this project or No Sprint (Backlog)."
             )
 
+    t_start = _parse_task_date(req.start_date)
+    t_due = _parse_task_date(req.due_date)
+
     task = Task(
-        title=req.title,
-        description=req.description,
+        title=req.title.strip(),
+        description=req.description.strip() if req.description else None,
         priority=req.priority.upper(),
         project_id=project.id,
         sprint_id=sprint_id,
-        estimated_hours=req.estimated_hours,
-        story_points=req.story_points,
-        start_date=req.start_date,
-        due_date=req.due_date,
+        estimated_hours=max(float(req.estimated_hours or 0.0), 0.0),
+        story_points=max(int(req.story_points or 1), 1),
+        start_date=t_start,
+        due_date=t_due,
         assigned_developer_id=assigned_dev.id if assigned_dev else None,
         created_by=current_user.id,
         status="NOT_STARTED",
@@ -231,11 +260,20 @@ def update_task(task_id: str, req: TaskUpdate, db: Session = Depends(get_db), cu
         
         task.status = new_status
     if req.progress is not None: task.progress = req.progress
-    if req.sprint_id is not None: task.sprint_id = req.sprint_id
+    if req.sprint_id is not None:
+        if req.sprint_id:
+            sp = db.query(Sprint).filter(Sprint.id == req.sprint_id).first()
+            if not sp:
+                raise HTTPException(status_code=400, detail="Sprint not found")
+            if sp.project_id != task.project_id:
+                raise HTTPException(status_code=400, detail="Selected sprint does not belong to this project.")
+            task.sprint_id = req.sprint_id
+        else:
+            task.sprint_id = None
     if req.estimated_hours is not None: task.estimated_hours = req.estimated_hours
     if req.story_points is not None: task.story_points = req.story_points
-    if req.start_date is not None: task.start_date = req.start_date
-    if req.due_date is not None: task.due_date = req.due_date
+    if req.start_date is not None: task.start_date = _parse_task_date(req.start_date)
+    if req.due_date is not None: task.due_date = _parse_task_date(req.due_date)
     
     if req.assigned_developer_id is not None and req.assigned_developer_id != task.assigned_developer_id:
         task.assigned_developer_id = req.assigned_developer_id

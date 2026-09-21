@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 from datetime import datetime, date
 
 # --- Auth Schemas ---
@@ -133,14 +133,14 @@ class SprintCreate(BaseModel):
     project_id: str
     name: str
     goal: Optional[str] = None
-    start_date: date
-    end_date: date
+    start_date: Union[date, str]
+    end_date: Union[date, str]
 
 class SprintUpdate(BaseModel):
     name: Optional[str] = None
     goal: Optional[str] = None
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
+    start_date: Optional[Union[date, str]] = None
+    end_date: Optional[Union[date, str]] = None
     status: Optional[str] = None
 
 class SprintResponse(BaseModel):
@@ -170,8 +170,8 @@ class TaskCreate(BaseModel):
     sprint_id: Optional[str] = None
     estimated_hours: float = 0.0
     story_points: int = 1
-    start_date: Optional[date] = None
-    due_date: Optional[date] = None
+    start_date: Optional[Union[date, str]] = None
+    due_date: Optional[Union[date, str]] = None
     assigned_developer_id: Optional[str] = None
     use_active_sprint: bool = False
 

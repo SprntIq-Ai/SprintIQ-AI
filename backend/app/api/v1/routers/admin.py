@@ -504,17 +504,28 @@ def get_activity_logs(
     current_user: Profile = Depends(admin_guard)
 ):
     query = db.query(ActivityLog)
-    if action:
+    if action and action.upper() != "ALL":
         query = query.filter(ActivityLog.action == action.upper())
     
-    logs = query.order_by(ActivityLog.created_at.desc()).all()
+    # Query database with order and limit
+    logs = query.order_by(ActivityLog.created_at.desc()).offset(skip).limit(limit).all()
+    if not logs:
+        return []
+
+    # Batch fetch all referenced user profiles in a single query to eliminate N+1 latency
+    user_ids = {l.user_id for l in logs if l.user_id}
+    users_map = {}
+    if user_ids:
+        profiles = db.query(Profile).filter(Profile.id.in_(user_ids)).all()
+        users_map = {p.id: p for p in profiles}
+
     res = []
     q_lower = q.lower() if q else None
     for l in logs:
-        u = db.query(Profile).filter(Profile.id == l.user_id).first() if l.user_id else None
+        u = users_map.get(l.user_id) if l.user_id else None
         u_name = u.full_name if u else "System"
         u_email = u.email if u else "N/A"
-        u_role = u.role.name.upper() if u and u.role else ("SYSTEM" if not u else "USER")
+        u_role = u.role.name.upper() if (u and u.role) else ("SYSTEM" if not u else "USER")
 
         if q_lower:
             match = (
@@ -537,5 +548,5 @@ def get_activity_logs(
             "details": l.details,
             "created_at": l.created_at.isoformat() if l.created_at else None
         })
-    return res[skip : skip + limit]
+    return res
 

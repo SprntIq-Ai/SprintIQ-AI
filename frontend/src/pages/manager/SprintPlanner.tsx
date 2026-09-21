@@ -17,6 +17,22 @@ export const SprintPlanner: React.FC = () => {
   const [isApplyingAi, setIsApplyingAi] = useState(false);
   const [aiPlan, setAiPlan] = useState<AISprintPlan | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [manualError, setManualError] = useState<string | null>(null);
+  const [isSubmittingManual, setIsSubmittingManual] = useState(false);
+
+  const normalizeAiCompletionDate = (plan: any): string => {
+    const today = new Date();
+    const durationWeeks = Math.max(parseInt(plan?.duration_weeks || 2), 1);
+    const fallbackEnd = new Date(today.getTime() + durationWeeks * 7 * 86400000).toISOString().split('T')[0];
+    const candidate = plan?.estimated_completion_date;
+    if (!candidate || typeof candidate !== 'string') return fallbackEnd;
+    const cleanCand = candidate.split('T')[0];
+    const candDate = new Date(cleanCand);
+    if (isNaN(candDate.getTime()) || candDate < today || candDate.getFullYear() < today.getFullYear()) {
+      return fallbackEnd;
+    }
+    return cleanCand;
+  };
 
   // Form State
   const [name, setName] = useState('');
@@ -70,15 +86,30 @@ export const SprintPlanner: React.FC = () => {
 
   const handleCreateSprint = async (e: React.FormEvent) => {
     e.preventDefault();
+    setManualError(null);
     const targetProjId = projectId || (projects.length > 0 ? projects[0].id : '');
     if (!targetProjId) {
-      alert("Please select a target project first.");
+      setManualError("Please select a target project first.");
       return;
     }
+    if (!startDate) {
+      setManualError("Start date is required.");
+      return;
+    }
+    if (!endDate) {
+      setManualError("End date is required.");
+      return;
+    }
+    if (new Date(endDate) < new Date(startDate)) {
+      setManualError("End date must be on or after start date.");
+      return;
+    }
+
+    setIsSubmittingManual(true);
     try {
       await sprintService.create({
-        name,
-        goal,
+        name: name.trim(),
+        goal: goal.trim() || undefined,
         start_date: startDate,
         end_date: endDate,
         project_id: targetProjId,
@@ -88,9 +119,16 @@ export const SprintPlanner: React.FC = () => {
       setGoal('');
       setStartDate('');
       setEndDate('');
+      setManualError(null);
       loadData();
     } catch (err: any) {
-      alert(err?.response?.data?.detail || "Failed to create sprint.");
+      const detail = err?.response?.data?.detail;
+      const msg = Array.isArray(detail)
+        ? detail.map((d: any) => `${d.loc?.join('.')}: ${d.msg}`).join('; ')
+        : (detail || err.message || "Failed to create sprint.");
+      setManualError(msg);
+    } finally {
+      setIsSubmittingManual(false);
     }
   };
 
@@ -103,10 +141,16 @@ export const SprintPlanner: React.FC = () => {
     setIsGeneratingAi(true);
     setAiError(null);
     try {
-      const res = await aiService.planSprint({ project_id: targetProjId, target_focus: "Velocity & Feature Delivery" });
+      const todayStr = new Date().toISOString().split('T')[0];
+      const res = await aiService.planSprint({
+        project_id: targetProjId,
+        target_focus: "Velocity & Feature Delivery",
+        start_date: todayStr
+      });
       setAiPlan(res);
     } catch (e: any) {
-      setAiError(e?.response?.data?.detail || "AI Sprint Planning failed. Please try again.");
+      const detail = e?.response?.data?.detail;
+      setAiError(detail || "AI Sprint Planning failed. Please try again.");
     } finally {
       setIsGeneratingAi(false);
     }
@@ -116,12 +160,16 @@ export const SprintPlanner: React.FC = () => {
     const targetProjId = projectId || (projects.length > 0 ? projects[0].id : '');
     if (!aiPlan || !targetProjId) return;
     setIsApplyingAi(true);
+    setAiError(null);
     try {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const validEndDate = normalizeAiCompletionDate(aiPlan);
+
       const newSprint = await sprintService.create({
-        name: `Sprint AI - ${aiPlan.goal.slice(0, 30)}...`,
+        name: `Sprint AI - ${(aiPlan.goal || 'Goal').slice(0, 30)}...`,
         goal: aiPlan.goal,
-        start_date: new Date().toISOString().split('T')[0],
-        end_date: aiPlan.estimated_completion_date || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
+        start_date: todayStr,
+        end_date: validEndDate,
         project_id: targetProjId,
       });
 
@@ -147,7 +195,11 @@ export const SprintPlanner: React.FC = () => {
       setAiPlan(null);
       loadData();
     } catch (e: any) {
-      alert(e?.response?.data?.detail || "Failed to apply AI Sprint");
+      const detail = e?.response?.data?.detail;
+      const msg = Array.isArray(detail)
+        ? detail.map((d: any) => `${d.loc?.join('.')}: ${d.msg}`).join('; ')
+        : (detail || e.message || "Failed to apply AI Sprint");
+      setAiError(msg);
     } finally {
       setIsApplyingAi(false);
     }

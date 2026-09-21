@@ -1,6 +1,20 @@
 import { RoleType } from '../types';
 
-const rawApiUrl = (import.meta as any).env?.VITE_API_URL || '/api';
+const getRawApiUrl = (): string => {
+  const envUrl = (import.meta as any).env?.VITE_API_BASE_URL || (import.meta as any).env?.VITE_API_URL;
+  if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
+    return envUrl.trim();
+  }
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host.includes('vercel.app') || (host !== 'localhost' && host !== '127.0.0.1')) {
+      return 'https://sprintiq-ai.onrender.com/api';
+    }
+  }
+  return '/api';
+};
+
+const rawApiUrl = getRawApiUrl();
 export const API_BASE_URL = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl.replace(/\/$/, '')}/api`;
 
 /* ============================================

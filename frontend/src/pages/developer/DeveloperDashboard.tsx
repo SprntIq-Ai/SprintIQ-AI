@@ -29,6 +29,8 @@ export const DeveloperDashboard: React.FC = () => {
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [github, setGithub] = useState<any>(null);
+  const [githubLoading, setGithubLoading] = useState(true);
+  const [githubError, setGithubError] = useState<string | null>(null);
 
   const firstName = user?.full_name?.split(' ')[0] || 'Developer';
 
@@ -39,8 +41,16 @@ export const DeveloperDashboard: React.FC = () => {
     }).catch((err) => console.error(err));
 
     githubService.getAnalytics({ period: '30d', page: 1, page_size: 1 })
-      .then((res) => setGithub(res))
-      .catch(() => setGithub(null));
+      .then((res) => {
+        setGithub(res);
+        setGithubLoading(false);
+      })
+      .catch((err) => {
+        setGithub(null);
+        setGithubLoading(false);
+        const msg = err?.response?.data?.detail || err?.message || 'Failed to load GitHub analytics';
+        setGithubError(msg);
+      });
   }, []);
 
   if (isLoading || !data) {
@@ -229,8 +239,22 @@ export const DeveloperDashboard: React.FC = () => {
             </Link>
           }
         >
-          {!github ? (
-            <p className="text-xs" style={{ color: 'var(--role-text-muted)' }}>GitHub analytics unavailable.</p>
+          {githubLoading ? (
+            <p className="text-xs" style={{ color: 'var(--role-text-muted)' }}>Loading GitHub analytics...</p>
+          ) : githubError ? (
+            <div className="space-y-1">
+              <p className="text-xs text-rose-500 font-medium">Failed to load GitHub analytics</p>
+              <p className="text-[11px]" style={{ color: 'var(--role-text-muted)' }}>{githubError}</p>
+            </div>
+          ) : !github || (github.summary?.repositories === 0 && (!github.repositories?.items || github.repositories.items.length === 0)) ? (
+            <div className="py-2">
+              <p className="text-xs" style={{ color: 'var(--role-text-muted)' }}>
+                No GitHub repository connected to your assigned project.
+              </p>
+              <p className="text-[11px] mt-1 text-slate-400">
+                Connect a repository in Project Intelligence or ask your project manager to link one.
+              </p>
+            </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
               {ghStats.map((s) => (

@@ -180,7 +180,7 @@ export const aiService = {
     (await api.get(`/ai/risk-prediction${projectId ? `?project_id=${projectId}` : ''}`)).data,
   getHealthScore: async (projectId?: string) =>
     (await api.get(`/ai/health-score${projectId ? `?project_id=${projectId}` : ''}`)).data,
-  planSprint: async (data: { project_id: string; target_focus?: string }) =>
+  planSprint: async (data: { project_id: string; target_focus?: string; start_date?: string }) =>
     (await api.post('/ai/sprint-planner', data)).data,
   generateTask: async (title: string, projectId?: string) =>
     (await api.post('/ai/task-generator', { title, project_id: projectId })).data,

@@ -10,6 +10,7 @@ from app.api.deps import get_current_user, require_roles
 from app.models.domain import (
     Profile, Project, ProjectMember, GitHubRepository, GitHubBranch, GitHubCommit
 )
+from app.services.notification_service import NotificationService
 from app.services.github_service import (
     get_project_github_analytics,
     get_central_github_analytics,
@@ -44,7 +45,7 @@ from app.services.github_service import (
 router = APIRouter(prefix="/github", tags=["GitHub Engineering Analytics"])
 
 github_access = require_roles(["admin", "manager", "developer"])
-repo_manage = require_roles(["developer"])
+repo_manage = require_roles(["admin", "manager", "developer"])
 
 REPO_NAME_RE = re.compile(r"^[A-Za-z0-9._-]+$")
 
@@ -429,6 +430,18 @@ def connect_repository(
         raise HTTPException(status_code=403, detail=result.get("message", PRIVATE_REPOSITORY_MESSAGE))
     if status == "UNAVAILABLE":
         raise HTTPException(status_code=503, detail=result.get("message", GITHUB_UNAVAILABLE_MESSAGE))
+
+    repo_id_val = None
+    if isinstance(result.get("repository"), dict):
+        repo_id_val = result["repository"].get("id")
+    NotificationService.log_activity(
+        db=db,
+        user_id=current_user.id,
+        action="CONNECT_GITHUB_REPO",
+        entity_type="GITHUB_REPOSITORY",
+        entity_id=repo_id_val or payload.project_id,
+        details={"owner": owner, "repo": repo, "project_id": payload.project_id}
+    )
     return result
 
 
