@@ -1,5 +1,6 @@
 import json
 import httpx
+from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 from app.core.config import settings
 
@@ -181,12 +182,15 @@ class AIService:
         - technical_notes (string)
         """
         gemini_res = cls._call_gemini_rest(prompt)
+        if not gemini_res:
+            try:
+                gemini_res = gemini_generate(prompt)
+            except Exception as e:
+                print(f"[AIService] gemini_generate fallback failed: {e}")
         if gemini_res:
             try:
                 clean_json = gemini_res.replace("```json", "").replace("```", "").strip()
                 parsed = json.loads(clean_json)
-                # Gemini may omit the title field; always inject it so the frontend
-                # never receives an undefined task name.
                 parsed["title"] = parsed.get("title") or title
                 return parsed
             except Exception:
@@ -227,6 +231,11 @@ class AIService:
         - workload_distribution (dict of dev_name: story_points)
         """
         gemini_res = cls._call_gemini_rest(prompt)
+        if not gemini_res:
+            try:
+                gemini_res = gemini_generate(prompt)
+            except Exception as e:
+                print(f"[AIService] gemini_generate fallback failed: {e}")
         if gemini_res:
             try:
                 clean_json = gemini_res.replace("```json", "").replace("```", "").strip()
@@ -234,6 +243,7 @@ class AIService:
             except Exception:
                 pass
 
+        completion_date = (datetime.utcnow().date() + timedelta(days=14)).isoformat()
         return {
             "goal": f"Deliver core intelligence modules, API endpoints, and role-based UX enhancements for {project_name}.",
             "duration_weeks": 2,
@@ -245,7 +255,7 @@ class AIService:
                 {"title": "Developer Focus Session & Leaderboard", "story_points": 3, "estimated_hours": 6.0, "priority": "LOW"}
             ],
             "total_story_points": 29,
-            "estimated_completion_date": "2026-08-29",
+            "estimated_completion_date": completion_date,
             "recommended_developers": ["Michael Chen (Dev)", "Sarah Jenkins (PM)", "Alex Vance (Admin)"],
             "workload_distribution": {
                 "Michael Chen (Dev)": 16,

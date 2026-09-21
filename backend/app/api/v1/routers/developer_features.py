@@ -34,15 +34,49 @@ def get_focus_sessions(db: Session = Depends(get_db), current_user: Profile = De
 
 @router.get("/badges")
 def get_developer_badges(db: Session = Depends(get_db), current_user: Profile = Depends(get_current_user)):
-    badges = db.query(DeveloperBadge).filter(DeveloperBadge.developer_id == current_user.id).all()
-    if not badges:
-        # Seed default badges if not present
-        default_badges = [
-            DeveloperBadge(developer_id=current_user.id, badge_type="Sprint Hero", badge_title="Sprint Hero", description="Completed all assigned sprint stories on time", icon_name="Zap"),
-            DeveloperBadge(developer_id=current_user.id, badge_type="Bug Hunter", badge_title="Bug Hunter", description="Resolved 5+ high-priority bug tasks", icon_name="Bug"),
-            DeveloperBadge(developer_id=current_user.id, badge_type="AI Explorer", badge_title="AI Explorer", description="Used Gemini Copilot to generate 10+ code solutions", icon_name="Sparkles")
-        ]
-        db.add_all(default_badges)
+    from app.models.domain import AIHistory
+    existing_badges = db.query(DeveloperBadge).filter(DeveloperBadge.developer_id == current_user.id).all()
+    existing_types = {b.badge_type for b in existing_badges}
+
+    user_tasks = db.query(Task).filter(Task.assigned_developer_id == current_user.id).all()
+    comp_tasks = [t for t in user_tasks if t.status in ["COMPLETED", "REVIEW_PENDING"]]
+    bug_tasks = [t for t in user_tasks if "bug" in (t.title or "").lower() or "fix" in (t.title or "").lower() or t.priority == "URGENT"]
+    ai_count = db.query(AIHistory).filter(AIHistory.user_id == current_user.id).count()
+    focus_count = db.query(FocusSession).filter(FocusSession.developer_id == current_user.id).count()
+    
+    new_badges = []
+    if "Sprint Hero" not in existing_types and (len(comp_tasks) > 0 or len(user_tasks) > 0):
+        new_badges.append(DeveloperBadge(developer_id=current_user.id, badge_type="Sprint Hero", badge_title="Sprint Hero", description="Actively delivered user stories in sprint backlog", icon_name="Zap"))
+    if "Bug Hunter" not in existing_types and len(bug_tasks) > 0:
+        new_badges.append(DeveloperBadge(developer_id=current_user.id, badge_type="Bug Hunter", badge_title="Bug Hunter", description="Tackled critical defect fixes and high-priority bugs", icon_name="Bug"))
+    if "AI Explorer" not in existing_types and ai_count > 0:
+        new_badges.append(DeveloperBadge(developer_id=current_user.id, badge_type="AI Explorer", badge_title="AI Explorer", description="Leveraged Gemini AI intelligence copilot for engineering tasks", icon_name="Sparkles"))
+    if "Deep Focus" not in existing_types and focus_count > 0:
+        new_badges.append(DeveloperBadge(developer_id=current_user.id, badge_type="Deep Focus", badge_title="Deep Focus", description="Completed focused engineering sessions", icon_name="Star"))
+    if "Team Player" not in existing_types and len(user_tasks) > 0:
+        new_badges.append(DeveloperBadge(developer_id=current_user.id, badge_type="Team Player", badge_title="Team Player", description="Active contributor across team development repositories", icon_name="Trophy"))
+
+    if new_badges:
+        db.add_all(new_badges)
         db.commit()
-        badges = default_badges
-    return badges
+        existing_badges.extend(new_badges)
+
+    if not existing_badges:
+        # Default badge for newly registered developer
+        default_b = DeveloperBadge(developer_id=current_user.id, badge_type="Sprint Hero", badge_title="Sprint Hero", description="Assigned and actively working in engineering sprint", icon_name="Zap")
+        db.add(default_b)
+        db.commit()
+        existing_badges = [default_b]
+
+    return [
+        {
+            "id": b.id,
+            "developer_id": b.developer_id,
+            "badge_type": b.badge_type,
+            "badge_title": b.badge_title,
+            "description": b.description,
+            "icon_name": b.icon_name,
+            "unlocked_at": b.unlocked_at.isoformat() if b.unlocked_at else None
+        }
+        for b in existing_badges
+    ]

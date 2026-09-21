@@ -15,11 +15,12 @@ class MLPredictor:
         Runs Scikit-learn prediction for project delay risk using real project execution features.
         Stores the output prediction record in PostgreSQL.
         """
-        project = db.query(Project).filter(Project.id == project_id).first()
+        project = db.query(Project).filter((Project.id == project_id) | (Project.key == project_id.upper())).first()
         if not project:
             return {"error": "Project not found"}
 
-        raw_features = extract_project_features(db, project_id)
+        resolved_id = project.id
+        raw_features = extract_project_features(db, resolved_id)
 
         # Handle Insufficient Data condition
         total_tasks = raw_features.get("total_tasks", 0.0)

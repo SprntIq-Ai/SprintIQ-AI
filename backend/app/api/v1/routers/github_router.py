@@ -111,9 +111,16 @@ def list_accessible_projects(db: Session = Depends(get_db), current_user: Profil
     for r in repos:
         repo_map.setdefault(r.project_id, []).append({
             "id": r.id,
+            "project_id": r.project_id,
             "repo_name": r.repo_name,
             "owner": r.owner,
+            "full_name": r.full_name or f"{r.owner}/{r.repo_name}",
             "html_url": r.html_url,
+            "description": r.description or "",
+            "visibility": r.visibility or "public",
+            "default_branch": r.default_branch or "main",
+            "open_prs_count": r.open_prs_count or 0,
+            "open_issues_count": r.open_issues_count or 0,
             "sync_status": r.sync_status,
             "last_synced_at": r.last_synced_at,
         })

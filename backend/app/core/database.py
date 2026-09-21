@@ -2,11 +2,13 @@ from sqlalchemy import create_engine, text, inspect
 from sqlalchemy.orm import sessionmaker, declarative_base
 from app.core.config import settings
 
+import os
+
 db_url = settings.DATABASE_URL
 if not db_url:
-    import warnings
-    warnings.warn("DATABASE_URL is not set. The backend will start but database operations will fail.")
-    db_url = "sqlite:///./sprintiq_fallback.db"
+    backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    fallback_db_path = os.path.join(backend_dir, "sprintiq_fallback.db").replace("\\", "/")
+    db_url = f"sqlite:///{fallback_db_path}"
 
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)

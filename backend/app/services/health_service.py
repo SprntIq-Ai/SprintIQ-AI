@@ -17,11 +17,12 @@ def calculate_engineering_health(db: Session, project_id: str) -> dict:
     Calculates transparent weighted Engineering Health Score (0-100) from real PostgreSQL project data.
     Generates AI explanations via Gemini API.
     """
-    project = db.query(Project).filter(Project.id == project_id).first()
+    project = db.query(Project).filter((Project.id == project_id) | (Project.key == project_id.upper())).first()
     if not project:
         return {"error": "Project not found"}
 
-    raw = extract_project_features(db, project_id)
+    resolved_id = project.id
+    raw = extract_project_features(db, resolved_id)
 
     # Component Scores (0-100)
     tc_score = min(raw.get("completion_rate", 0.0) * 100.0, 100.0)

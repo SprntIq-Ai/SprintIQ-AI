@@ -415,11 +415,20 @@ export const GitHubEngineeringAnalytics: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pollTick]);
 
+  const refreshProjects = useCallback(async () => {
+    await fetchAndEnrichProjects(false);
+  }, [fetchAndEnrichProjects]);
+
   const handleRefresh = useCallback(() => {
+    if (!activeProjectId) {
+      setLiveRefreshing(true);
+      refreshProjects().finally(() => setLiveRefreshing(false));
+      return;
+    }
     forceNextRef.current = true;
     setLiveRefreshing(true);
     setPollTick((t) => t + 1);
-  }, []);
+  }, [activeProjectId, refreshProjects]);
 
   const handleSelectProject = useCallback((id: string) => {
     setSelectedProjectIds((prev) => {
@@ -446,10 +455,6 @@ export const GitHubEngineeringAnalytics: React.FC = () => {
     setConnectProjectId(projectId || projects[0]?.id);
     setFormOpen(true);
   }, [projects]);
-
-  const refreshProjects = useCallback(async () => {
-    await fetchAndEnrichProjects(false);
-  }, [fetchAndEnrichProjects]);
 
   const status = liveActivity?.status;
   const repo = liveActivity?.repository as GitHubLiveRepository | undefined;
@@ -490,7 +495,7 @@ export const GitHubEngineeringAnalytics: React.FC = () => {
               Live · Last synced {fmtClock(liveActivity?.last_synced)}
             </span>
           )}
-          <Button variant="outline" size="sm" icon={<RefreshCw className={`w-4 h-4 ${liveRefreshing ? 'animate-spin' : ''}`} />} onClick={handleRefresh} disabled={!activeProjectId || liveRefreshing}>
+          <Button variant="outline" size="sm" icon={<RefreshCw className={`w-4 h-4 ${liveRefreshing ? 'animate-spin' : ''}`} />} onClick={handleRefresh} disabled={liveRefreshing}>
             Refresh
           </Button>
           {canManage && (
@@ -516,12 +521,13 @@ export const GitHubEngineeringAnalytics: React.FC = () => {
                 onClick={handleSelectAll}
               >
                 All {(() => {
-                  const c = projects.reduce((acc, p) => acc + p.repositories.length, 0);
+                  const c = projects.reduce((acc, p) => acc + (p.repositories?.length || 0), 0);
                   return c > 0 ? `(${c})` : '';
                 })()}
               </button>
               {projects.map((p) => {
                 const active = selectedProjectIds.length === 1 && selectedProjectIds[0] === p.id;
+                const repoCount = (p.repositories || []).length;
                 return (
                   <button
                     key={p.id}
@@ -529,7 +535,7 @@ export const GitHubEngineeringAnalytics: React.FC = () => {
                     onClick={() => handleSelectProject(p.id)}
                   >
                     {p.name}
-                    <span className="ml-1 opacity-60">({p.repositories.length})</span>
+                    <span className="ml-1 opacity-60">({repoCount})</span>
                   </button>
                 );
               })}
@@ -541,7 +547,7 @@ export const GitHubEngineeringAnalytics: React.FC = () => {
       {!activeProjectId && (
         <>
           {(() => {
-            const allConnectedRepos = projects.flatMap(p => p.repositories.map(r => ({ ...r, projectId: p.id, projectName: p.name })));
+            const allConnectedRepos = projects.flatMap(p => (p.repositories || []).map((r: any) => ({ ...r, projectId: p.id, projectName: p.name })));
 
             if (projectsLoading) {
               return (

@@ -4,10 +4,18 @@ import { User, Project, Task, Sprint, NotificationItem, AIAnalysis, ProjectInvit
 
 const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 30000, // 30s timeout prevents permanent hanging on slow/failed AI calls
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// Event-driven data synchronization helper
+export const emitDataMutation = (entity: string) => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('sprintiq:mutation', { detail: { entity } }));
+  }
+};
 
 // Request Interceptor to add Bearer JWT Token
 api.interceptors.request.use(
@@ -59,13 +67,30 @@ export const authService = {
 export const adminService = {
   getDashboard: async () => (await api.get('/admin/dashboard')).data,
   getProjects: async () => (await api.get<Project[]>('/admin/projects')).data,
-  createProject: async (data: any) => (await api.post<Project>('/admin/projects', data)).data,
-  updateProject: async (id: string, data: any) => (await api.put<Project>(`/admin/projects/${id}`, data)).data,
-  deleteProject: async (id: string) => (await api.delete(`/admin/projects/${id}`)).data,
+  createProject: async (data: any) => {
+    const res = (await api.post<Project>('/admin/projects', data)).data;
+    emitDataMutation('projects');
+    return res;
+  },
+  updateProject: async (id: string, data: any) => {
+    const res = (await api.put<Project>(`/admin/projects/${id}`, data)).data;
+    emitDataMutation('projects');
+    return res;
+  },
+  deleteProject: async (id: string) => {
+    const res = (await api.delete(`/admin/projects/${id}`)).data;
+    emitDataMutation('projects');
+    return res;
+  },
   inviteManager: async (data: any) => (await api.post<ProjectInvitation>('/admin/invite-manager', data)).data,
   getUsers: async (role?: string) => (await api.get<User[]>(`/admin/users${role ? `?role=${role}` : ''}`)).data,
-  toggleUserStatus: async (id: string, status: string) => (await api.put(`/admin/users/${id}/status?status_val=${status}`)).data,
-  getActivityLogs: async () => (await api.get('/admin/activity-logs')).data,
+  toggleUserStatus: async (id: string, status: string) => {
+    const res = (await api.put(`/admin/users/${id}/status?status_val=${status}`)).data;
+    emitDataMutation('users');
+    return res;
+  },
+  getActivityLogs: async (params?: { q?: string; action?: string; limit?: number; skip?: number }) =>
+    (await api.get('/admin/activity-logs', { params })).data,
 };
 
 export const managerService = {
@@ -74,20 +99,34 @@ export const managerService = {
   getDevelopers: async () => (await api.get('/manager/developers')).data,
   getProjectTeam: async (projectId: string) => (await api.get(`/manager/projects/${projectId}/team`)).data,
   getAvailableDevelopers: async (projectId: string) => (await api.get(`/manager/projects/${projectId}/available-developers`)).data,
-  assignDevelopers: async (projectId: string, developerIds: string[], team?: string) =>
-    (await api.post(`/manager/projects/${projectId}/developers/assign`, { developer_ids: developerIds, team })).data,
+  assignDevelopers: async (projectId: string, developerIds: string[], team?: string) => {
+    const res = (await api.post(`/manager/projects/${projectId}/developers/assign`, { developer_ids: developerIds, team })).data;
+    emitDataMutation('team');
+    return res;
+  },
   inviteDeveloper: async (data: any) => (await api.post<any>('/manager/invite-developer', data)).data,
   getReviews: async () => (await api.get('/manager/reviews')).data,
-  decideReview: async (taskId: string, action: string, feedback?: string) => (await api.post(`/manager/reviews/${taskId}/decide`, { action, feedback })).data,
+  decideReview: async (taskId: string, action: string, feedback?: string) => {
+    const res = (await api.post(`/manager/reviews/${taskId}/decide`, { action, feedback })).data;
+    emitDataMutation('tasks');
+    return res;
+  },
 };
 
 export const developerService = {
   getDashboard: async () => (await api.get('/developer/dashboard')).data,
   getTasks: async () => (await api.get<Task[]>('/developer/tasks')).data,
   getCompletedTasks: async () => (await api.get<Task[]>('/developer/tasks/completed')).data,
-  updateProgress: async (taskId: string, progress: number, status: string, notes?: string) =>
-    (await api.put(`/developer/tasks/${taskId}/progress`, { progress, status, notes })).data,
-  submitTask: async (taskId: string) => (await api.post(`/developer/tasks/${taskId}/submit`)).data,
+  updateProgress: async (taskId: string, progress: number, status: string, notes?: string) => {
+    const res = (await api.put(`/developer/tasks/${taskId}/progress`, { progress, status, notes })).data;
+    emitDataMutation('tasks');
+    return res;
+  },
+  submitTask: async (taskId: string) => {
+    const res = (await api.post(`/developer/tasks/${taskId}/submit`)).data;
+    emitDataMutation('tasks');
+    return res;
+  },
   getComments: async (taskId: string) => (await api.get<TaskComment[]>(`/developer/tasks/${taskId}/comments`)).data,
   addComment: async (taskId: string, content: string) => (await api.post(`/developer/tasks/${taskId}/comments`, { content })).data,
   aiChat: async (prompt: string) => (await api.post('/developer/ai-chat', { prompt })).data,
@@ -102,15 +141,35 @@ export const projectService = {
 
 export const taskService = {
   getAll: async (params?: any) => (await api.get<Task[]>('/tasks', { params })).data,
-  create: async (data: any) => (await api.post<Task>('/tasks', data)).data,
-  update: async (id: string, data: any) => (await api.put<Task>(`/tasks/${id}`, data)).data,
-  delete: async (id: string) => (await api.delete(`/tasks/${id}`)).data,
+  create: async (data: any) => {
+    const res = (await api.post<Task>('/tasks', data)).data;
+    emitDataMutation('tasks');
+    return res;
+  },
+  update: async (id: string, data: any) => {
+    const res = (await api.put<Task>(`/tasks/${id}`, data)).data;
+    emitDataMutation('tasks');
+    return res;
+  },
+  delete: async (id: string) => {
+    const res = (await api.delete(`/tasks/${id}`)).data;
+    emitDataMutation('tasks');
+    return res;
+  },
 };
 
 export const sprintService = {
   getAll: async (projectId?: string) => (await api.get<Sprint[]>(`/sprints${projectId ? `?project_id=${projectId}` : ''}`)).data,
-  create: async (data: any) => (await api.post<Sprint>('/sprints', data)).data,
-  update: async (id: string, data: any) => (await api.put<Sprint>(`/sprints/${id}`, data)).data,
+  create: async (data: any) => {
+    const res = (await api.post<Sprint>('/sprints', data)).data;
+    emitDataMutation('sprints');
+    return res;
+  },
+  update: async (id: string, data: any) => {
+    const res = (await api.put<Sprint>(`/sprints/${id}`, data)).data;
+    emitDataMutation('sprints');
+    return res;
+  },
 };
 
 export const aiService = {
@@ -154,7 +213,9 @@ export const searchService = {
 
 export const reportService = {
   list: async () => (await api.get('/reports')).data,
-  download: async (data: { title: string; report_type: string; format: string }) => {
+  getPreview: async (params: { report_type: string; project_id?: string; sprint_id?: string }) =>
+    (await api.get('/reports/preview', { params })).data,
+  download: async (data: { title: string; report_type: string; format: string; project_id?: string; sprint_id?: string }) => {
     const response = await api.post('/reports/generate', data, { responseType: 'blob' });
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
@@ -179,8 +240,11 @@ export const publicService = {
 
 export const adminSettingsService = {
   getSettings: async () => (await api.get('/settings')).data,
-  updateSettings: async (settings: Record<string, string | boolean | number>) =>
-    (await api.put('/settings', { settings })).data,
+  updateSettings: async (settings: Record<string, string | boolean | number>) => {
+    const res = (await api.put('/settings', { settings })).data;
+    emitDataMutation('settings');
+    return res;
+  },
   testDatabase: async () => (await api.post('/settings/test-database')).data,
   testGemini: async () => (await api.post('/settings/test-gemini')).data,
   testGithub: async () => (await api.post('/settings/test-github')).data,

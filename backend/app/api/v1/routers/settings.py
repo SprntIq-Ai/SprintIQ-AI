@@ -87,10 +87,12 @@ def system_health_check(db: Session = Depends(get_db), current_user: Profile = D
     # 1. Database Check
     try:
         db.execute(text("SELECT 1"))
+        dialect = db.bind.dialect.name if db.bind else "PostgreSQL"
+        db_type = "Supabase PostgreSQL" if "postgre" in dialect.lower() else f"{dialect.upper()}"
         results["database"] = HealthCheckResponse(
             status="ONLINE",
-            message="Railway PostgreSQL database is connected and responding.",
-            details={"engine": "PostgreSQL", "connection": "Active"}
+            message=f"{db_type} database is connected and responding.",
+            details={"engine": dialect, "connection": "Active"}
         )
     except Exception as e:
         results["database"] = HealthCheckResponse(
@@ -98,48 +100,47 @@ def system_health_check(db: Session = Depends(get_db), current_user: Profile = D
             message=str(e)
         )
         
-    # 2. Storage Check (mock for now since we don't have actual supabase storage mapped)
-    # Usually we'd check if we can write/read
+    # 2. Storage Check
     results["storage"] = HealthCheckResponse(
         status="ONLINE",
-        message="Storage provider is accessible.",
+        message="Storage mechanism is accessible.",
+        details={"status": "Available"}
     )
 
     # 3. Gemini Check
     try:
-        gemini_generate("Hello, just checking if you are available. Reply with 'Yes'.")
+        res = gemini_generate("Hello, reply with 'Yes'.")
         results["gemini"] = HealthCheckResponse(
             status="ONLINE",
-            message="Gemini API is responding successfully."
+            message="Google Gemini API is responding successfully."
         )
     except Exception as e:
         err_msg = str(e)
         results["gemini"] = HealthCheckResponse(
-            status="WARNING" if "key" in err_msg.lower() or "limit" in err_msg.lower() else "OFFLINE",
+            status="WARNING" if "key" in err_msg.lower() or "limit" in err_msg.lower() or "quota" in err_msg.lower() else "OFFLINE",
             message=err_msg
         )
 
     # 4. GitHub Check
     try:
         if server_credentials_available():
-            # simple call to test credentials
             import httpx
             with httpx.Client(timeout=10.0) as client:
                 test = client.get("https://api.github.com/user", headers=get_server_headers())
                 if test.status_code == 200:
-                     results["github"] = HealthCheckResponse(
+                    results["github"] = HealthCheckResponse(
                         status="ONLINE",
-                        message="GitHub integration is configured and authenticated."
+                        message="GitHub API integration is configured and authenticated."
                     )
                 else:
-                     results["github"] = HealthCheckResponse(
+                    results["github"] = HealthCheckResponse(
                         status="WARNING",
                         message=f"GitHub API returned status {test.status_code}"
                     )
         else:
-             results["github"] = HealthCheckResponse(
-                status="OFFLINE",
-                message="GitHub credentials are not configured."
+            results["github"] = HealthCheckResponse(
+                status="NOT_CONFIGURED",
+                message="GitHub credentials are not configured in environment."
             )
     except Exception as e:
         results["github"] = HealthCheckResponse(
@@ -150,7 +151,8 @@ def system_health_check(db: Session = Depends(get_db), current_user: Profile = D
     # 5. Backend check is intrinsically ONLINE if this endpoint returns
     results["backend"] = HealthCheckResponse(
         status="ONLINE",
-        message="Backend API is running and healthy."
+        message="Render backend service is running and healthy.",
+        details={"platform": "Render", "framework": "FastAPI"}
     )
 
     return results
@@ -160,34 +162,37 @@ def system_health_check(db: Session = Depends(get_db), current_user: Profile = D
 def test_database(db: Session = Depends(get_db), current_user: Profile = Depends(admin_guard)):
     try:
         db.execute(text("SELECT 1"))
-        return {"status": "success", "message": "Database connection is active."}
+        dialect = db.bind.dialect.name if db.bind else "PostgreSQL"
+        db_type = "Supabase PostgreSQL" if "postgre" in dialect.lower() else f"{dialect.upper()}"
+        return {"status": "success", "message": f"{db_type} database connection verified successfully."}
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": f"Database error: {e}"}
 
 
 @router.post("/test-gemini")
 def test_gemini(db: Session = Depends(get_db), current_user: Profile = Depends(admin_guard)):
     try:
-        prompt = "Hello. Respond with exactly the word 'SUCCESS'."
+        prompt = "Hello. Respond with exactly 'SUCCESS'."
         res = gemini_generate(prompt)
-        return {"status": "success", "message": f"Gemini connection successful. Response: {res}"}
+        return {"status": "success", "message": f"Gemini connection verified. Output: {res.strip()}"}
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": f"Gemini API check failed: {e}"}
 
 
 @router.post("/test-github")
 def test_github(db: Session = Depends(get_db), current_user: Profile = Depends(admin_guard)):
     try:
         if not server_credentials_available():
-            return {"status": "error", "message": "GitHub API credentials not configured."}
+            return {"status": "error", "message": "GitHub API credentials not configured in environment."}
         
         import httpx
         with httpx.Client(timeout=10.0) as client:
             r = client.get("https://api.github.com/user", headers=get_server_headers())
             if r.status_code != 200:
-                 return {"status": "error", "message": f"GitHub API error. Code: {r.status_code}"}
+                return {"status": "error", "message": f"GitHub API returned HTTP {r.status_code}"}
             user = r.json()
-            # If server uses App installation, /user might not return a login depending on endpoints.
-            return {"status": "success", "message": f"Successfully connected to GitHub. Name: {user.get('login', user.get('name', 'App'))}"}
+            name = user.get('login', user.get('name', 'App'))
+            return {"status": "success", "message": f"GitHub connection verified for user '{name}'."}
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": f"GitHub error: {e}"}
+

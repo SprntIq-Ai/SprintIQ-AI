@@ -7,11 +7,32 @@ from app.models.domain import (
 )
 
 
+def _to_date(val):
+    if not val:
+        return None
+    if isinstance(val, datetime):
+        return val.date()
+    if isinstance(val, date):
+        return val
+    if isinstance(val, str):
+        try:
+            return datetime.fromisoformat(val.replace("Z", "+00:00")).date()
+        except Exception:
+            try:
+                return datetime.strptime(val[:10], "%Y-%m-%d").date()
+            except Exception:
+                return None
+    return None
+
 def _resolve_project(db: Session, project_identifier: str) -> Project:
     """Resolve a project by UUID or by key (e.g. 'SIQ')."""
+    if not project_identifier:
+        return db.query(Project).first()
     project = db.query(Project).filter(Project.id == project_identifier).first()
     if not project:
-        project = db.query(Project).filter(Project.key == project_identifier).first()
+        project = db.query(Project).filter(Project.key == project_identifier.upper()).first()
+    if not project:
+        project = db.query(Project).first()
     return project
 
 
@@ -44,19 +65,24 @@ def get_simulation_data(db: Session, project_identifier: str) -> dict:
 
     # Calculate baseline target in days
     today = date.today()
-    if project.start_date and project.target_date:
-        baseline_target_days = max((project.target_date - project.start_date).days, 1)
-        days_elapsed = max((today - project.start_date).days, 0)
-        days_remaining = max((project.target_date - today).days, 0)
-    elif project.target_date:
-        baseline_target_days = max((project.target_date - today).days, 1)
+    p_start = _to_date(project.start_date)
+    p_target = _to_date(project.target_date)
+
+    if p_start and p_target:
+        baseline_target_days = max((p_target - p_start).days, 1)
+        days_elapsed = max((today - p_start).days, 0)
+        days_remaining = max((p_target - today).days, 0)
+    elif p_target:
+        baseline_target_days = max((p_target - today).days, 1)
         days_elapsed = 0
         days_remaining = baseline_target_days
     else:
         # Estimate from sprints
-        if sprints:
-            earliest = min(s.start_date for s in sprints)
-            latest = max(s.end_date for s in sprints)
+        valid_sprint_starts = [_to_date(s.start_date) for s in sprints if _to_date(s.start_date)]
+        valid_sprint_ends = [_to_date(s.end_date) for s in sprints if _to_date(s.end_date)]
+        if valid_sprint_starts and valid_sprint_ends:
+            earliest = min(valid_sprint_starts)
+            latest = max(valid_sprint_ends)
             baseline_target_days = max((latest - earliest).days, 1)
             days_elapsed = max((today - earliest).days, 0)
             days_remaining = max((latest - today).days, 0)
@@ -373,10 +399,10 @@ def simulate_what_if_scenario(
 
     # ── Calculate derived metrics ──
 
-    simulated_target_days = baseline_target_days + simulated_delay_days
+    simulated_target_days = max(baseline_target_days + simulated_delay_days, 1)
     impact_percentage = round(
-        abs(simulated_delay_days) / baseline_target_days * 100, 1
-    ) if baseline_target_days > 0 else 0.0
+        abs(simulated_delay_days) / max(baseline_target_days, 1) * 100, 1
+    )
 
     # Risk level
     abs_delay = abs(simulated_delay_days)

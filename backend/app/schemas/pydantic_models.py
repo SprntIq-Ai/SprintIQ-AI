@@ -273,6 +273,7 @@ class ReportGenerateRequest(BaseModel):
     report_type: str # WEEKLY, SPRINT, PROJECT, DEVELOPER
     format: str # PDF, CSV, EXCEL
     project_id: Optional[str] = None
+    sprint_id: Optional[str] = None
     developer_id: Optional[str] = None
 
 # --- Notification Schemas ---

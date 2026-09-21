@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Badge } from '../../components/common/Badge';
 import { Card } from '../../components/common/Card';
 import { MetricCard } from '../../components/common/MetricCard';
@@ -27,7 +27,7 @@ export const AdminDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const COLORS = useChartColors();
 
-  useEffect(() => {
+  const fetchDashboardData = useCallback(() => {
     adminService.getDashboard().then((res) => {
       setData(res);
       setIsLoading(false);
@@ -44,6 +44,13 @@ export const AdminDashboard: React.FC = () => {
       .then((res) => setGithub(res))
       .catch(() => setGithub(null));
   }, []);
+
+  useEffect(() => {
+    fetchDashboardData();
+    const handleMutation = () => fetchDashboardData();
+    window.addEventListener('sprintiq:mutation', handleMutation);
+    return () => window.removeEventListener('sprintiq:mutation', handleMutation);
+  }, [fetchDashboardData]);
 
   if (isLoading || !data) {
     return (
@@ -139,16 +146,22 @@ export const AdminDashboard: React.FC = () => {
 
       {/* AI Governance Insight */}
       <AIInsightCard
-        severity={criticalCount > 0 ? 'danger' : atRiskCount > 0 ? 'warning' : 'success'}
-        title="AI Governance Insight"
+        severity={data.ai_governance_insight?.severity || (criticalCount > 0 ? 'danger' : atRiskCount > 0 ? 'warning' : 'success')}
+        title={data.ai_governance_insight?.title || "AI Governance Insight"}
         message={
-          criticalCount > 0
-            ? `${criticalCount} project(s) are in critical health and require immediate intervention.`
-            : atRiskCount > 0
-            ? `${atRiskCount} project(s) are showing early signs of delivery risk.`
-            : 'Organization-wide engineering health is stable.'
+          data.ai_governance_insight?.message || (
+            criticalCount > 0
+              ? `${criticalCount} project(s) are in critical health and require immediate intervention.`
+              : atRiskCount > 0
+              ? `${atRiskCount} project(s) are showing early signs of delivery risk.`
+              : 'Organization-wide engineering health is stable.'
+          )
         }
-        reason={`${healthyCount} healthy · ${atRiskCount} at risk · ${criticalCount} critical across ${projects.length} tracked projects. Overall completion rate is ${metrics.project_completion_rate}%.`}
+        reason={
+          data.ai_governance_insight?.reason || (
+            `${healthyCount} healthy · ${atRiskCount} at risk · ${criticalCount} critical across ${projects.length} tracked projects. Overall completion rate is ${metrics.project_completion_rate}%.`
+          )
+        }
       />
 
       {/* Charts */}

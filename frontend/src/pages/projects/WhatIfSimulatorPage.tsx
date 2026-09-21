@@ -83,15 +83,10 @@ export const WhatIfSimulatorPage: React.FC = () => {
 
   // Load baseline project data
   const loadSimulationData = useCallback(async () => {
-    if (!projectKey) {
-      setError('No project identifier found in URL.');
-      setDataLoading(false);
-      return;
-    }
     setDataLoading(true);
     setError(null);
     try {
-      const data = await intelligenceService.getSimulationData(projectKey);
+      const data = await intelligenceService.getSimulationData(projectKey || 'current');
       if (data.error) {
         setError(data.error);
       } else {
@@ -128,7 +123,7 @@ export const WhatIfSimulatorPage: React.FC = () => {
 
   // ── Run Simulation ──
   const runSimulation = async () => {
-    if (!projectKey) return;
+    const targetKey = simData?.project_key || simData?.project_id || projectKey || 'current';
     setLoading(true);
     setError(null);
     try {
@@ -136,7 +131,7 @@ export const WhatIfSimulatorPage: React.FC = () => {
         [currentScenario.paramKey]: paramValue,
         value: paramValue,
       };
-      const res = await intelligenceService.runProjectSimulation(projectKey, scenarioType, params);
+      const res = await intelligenceService.runProjectSimulation(targetKey, scenarioType, params);
       if (res.error) {
         setError(res.error);
       } else {

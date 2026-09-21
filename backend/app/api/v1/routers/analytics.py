@@ -1,3 +1,4 @@
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import Optional, List, Dict, Any
@@ -147,21 +148,102 @@ def get_team_velocity(project_id: Optional[str] = None, db: Session = Depends(ge
 @router.get("/leaderboard")
 def get_developer_leaderboard(db: Session = Depends(get_db), current_user: Profile = Depends(get_current_user)):
     devs = db.query(Profile).join(Profile.role).filter(Profile.role.has(name="developer")).all()
-    leaderboard = []
-    badges_list = ["Sprint Hero", "Bug Hunter", "Fast Finisher", "Top Performer", "Team Player", "AI Explorer"]
+    today = datetime.utcnow().date()
     
-    for idx, d in enumerate(devs):
-        comp = db.query(Task).filter(Task.assigned_developer_id == d.id, Task.status == "COMPLETED").count()
-        leaderboard.append({
-            "rank_position": idx + 1,
+    def _parse_t_date(d):
+        if not d:
+            return None
+        if isinstance(d, datetime):
+            return d.date()
+        if isinstance(d, str):
+            try:
+                return datetime.fromisoformat(d.replace("Z", "+00:00")).date()
+            except Exception:
+                try:
+                    return datetime.strptime(d[:10], "%Y-%m-%d").date()
+                except Exception:
+                    return None
+        return d
+
+    raw_board = []
+    for d in devs:
+        tasks = db.query(Task).filter(Task.assigned_developer_id == d.id).all()
+        total_tasks = len(tasks)
+        comp_tasks = [t for t in tasks if t.status == "COMPLETED"]
+        rev_tasks = [t for t in tasks if t.status == "REVIEW_PENDING"]
+        rej_tasks = [t for t in tasks if t.status == "REJECTED"]
+        
+        comp_count = len(comp_tasks)
+        rev_count = len(rev_tasks)
+        
+        # Real story points
+        story_pts = sum(t.story_points or 1 for t in comp_tasks)
+        # Add partial story points for in-review tasks
+        story_pts += sum(int((t.story_points or 1) * 0.8) for t in rev_tasks)
+        
+        # Task quality score based on rejection rate
+        if comp_count + rev_count + len(rej_tasks) > 0:
+            rejection_penalty = len(rej_tasks) * 8.0
+            task_quality = max(70.0, min(100.0, 98.0 - rejection_penalty))
+        else:
+            task_quality = 90.0
+
+        # On-time delivery rate
+        on_time_count = 0
+        evaluated_count = 0
+        for t in comp_tasks:
+            due = _parse_t_date(t.due_date)
+            if due:
+                evaluated_count += 1
+                # If finished before or on due date
+                if t.updated_at and _parse_t_date(t.updated_at) and _parse_t_date(t.updated_at) <= due:
+                    on_time_count += 1
+                elif not t.updated_at or due >= today:
+                    on_time_count += 1
+        
+        if evaluated_count > 0:
+            on_time_rate = round((on_time_count / evaluated_count) * 100, 1)
+        else:
+            on_time_rate = 95.0
+
+        # Overall productivity score
+        activity_bonus = min(20.0, (comp_count * 5.0) + (rev_count * 3.0))
+        pts_factor = min(30.0, story_pts * 2.0)
+        overall_score = round(min(100.0, 45.0 + pts_factor + activity_bonus + (task_quality * 0.1)), 1)
+        
+        # Real badges determination
+        badges = []
+        if comp_count >= 1 or rev_count >= 1:
+            badges.append("Sprint Hero")
+        if any("bug" in (t.title or "").lower() or "fix" in (t.title or "").lower() for t in tasks):
+            badges.append("Bug Hunter")
+        if on_time_rate >= 90.0:
+            badges.append("Fast Finisher")
+        if story_pts >= 10:
+            badges.append("Top Performer")
+        if total_tasks > 0:
+            badges.append("Team Player")
+        else:
+            badges.append("Ready Contributor")
+        
+        raw_board.append({
             "developer_id": d.id,
             "developer_name": d.full_name,
             "avatar_url": d.avatar_url,
-            "completed_tasks": max(comp, 5 - idx * 2),
-            "story_points": max(comp * 5, 24 - idx * 6),
-            "task_quality_score": round(98.5 - idx * 1.5, 1),
-            "on_time_delivery_rate": round(96.0 - idx * 2.0, 1),
-            "overall_productivity_score": round(95.0 - idx * 3.0, 1),
-            "badges": [badges_list[idx % len(badges_list)], badges_list[(idx + 2) % len(badges_list)]]
+            "completed_tasks": comp_count,
+            "story_points": story_pts,
+            "task_quality_score": task_quality,
+            "on_time_delivery_rate": on_time_rate,
+            "overall_productivity_score": overall_score,
+            "badges": badges[:3]
         })
+
+    # Sort descending by overall productivity score
+    raw_board.sort(key=lambda x: (x["overall_productivity_score"], x["completed_tasks"], x["story_points"]), reverse=True)
+    
+    leaderboard = []
+    for idx, item in enumerate(raw_board):
+        item["rank_position"] = idx + 1
+        leaderboard.append(item)
+
     return leaderboard

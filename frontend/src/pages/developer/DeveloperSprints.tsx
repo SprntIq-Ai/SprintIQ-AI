@@ -22,21 +22,34 @@ export const DeveloperSprints: React.FC = () => {
 
   useEffect(() => {
     fetchSprints();
+    const handleMutation = (e: any) => {
+      if (e.detail?.entity === 'sprints' || e.detail?.entity === 'tasks') {
+        fetchSprints();
+      }
+    };
+    window.addEventListener('sprintiq:mutation', handleMutation);
+    return () => window.removeEventListener('sprintiq:mutation', handleMutation);
   }, []);
 
   const filtered = sprints.filter(s => {
     if (filter !== 'All') {
-      const derived = s.derived_status || s.status;
-      if (filter.toUpperCase() !== derived) return false;
+      const derived = (s.derived_status || s.status || '').toUpperCase();
+      const matchFilter = filter.toUpperCase();
+      if (matchFilter === 'ACTIVE') {
+        if (derived !== 'ACTIVE' && s.status !== 'ACTIVE' && derived !== 'IN_PROGRESS') return false;
+      } else if (matchFilter !== derived) {
+        return false;
+      }
     }
     if (search.trim()) {
-      return s.name.toLowerCase().includes(search.toLowerCase());
+      const q = search.toLowerCase();
+      return (s.name || '').toLowerCase().includes(q) || (s.goal || '').toLowerCase().includes(q);
     }
     return true;
   });
 
   const getBadgeVariant = (derived: string | undefined): 'healthy' | 'at_risk' | 'critical' | 'completed' | 'in_progress' | 'pending' | 'default' => {
-    switch (derived) {
+    switch (derived?.toUpperCase()) {
       case 'COMPLETED': return 'completed';
       case 'OVERDUE': return 'critical';
       case 'ACTIVE': return 'in_progress';

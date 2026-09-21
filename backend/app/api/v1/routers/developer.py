@@ -322,10 +322,19 @@ def add_task_comment(task_id: str, req: CommentCreate, db: Session = Depends(get
 
 @router.post("/ai-chat")
 def developer_ai_chat(req: AIChatRequest, db: Session = Depends(get_db), current_user: Profile = Depends(dev_guard)):
-    result = query_project_aware_copilot(db, current_user, req.prompt, req.project_id, req.mode)
-    if result.get("error"):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=result["error"])
-    return {"prompt": req.prompt, "response": result["answer"]}
+    try:
+        result = query_project_aware_copilot(db, current_user, req.prompt, req.project_id, req.mode)
+        if result.get("error"):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=result["error"])
+        return {"prompt": req.prompt, "response": result.get("answer", "No response received.")}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[DeveloperAIChat Error]: {type(e).__name__} - {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI service is temporarily unavailable. Please try again."
+        )
 
 
 @router.get("/projects")

@@ -46,6 +46,11 @@ export const ManagerDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchDashboard(selectedProject || undefined);
+    const handleMutation = (e: any) => {
+      fetchDashboard(selectedProject || undefined);
+    };
+    window.addEventListener('sprintiq:mutation', handleMutation);
+    return () => window.removeEventListener('sprintiq:mutation', handleMutation);
   }, [selectedProject]);
 
   useEffect(() => {

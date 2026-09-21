@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { GlassCard } from '../../components/common/GlassCard';
 import { Badge } from '../../components/common/Badge';
 import { aiService } from '../../services/api';
@@ -11,7 +11,7 @@ export const GlobalAIInsights: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
 
-  const fetchAI = async () => {
+  const fetchAI = useCallback(async () => {
     setIsLoading(true);
     setIsError(false);
     try {
@@ -27,11 +27,14 @@ export const GlobalAIInsights: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchAI();
-  }, []);
+    const handleMutation = () => fetchAI();
+    window.addEventListener('sprintiq:mutation', handleMutation);
+    return () => window.removeEventListener('sprintiq:mutation', handleMutation);
+  }, [fetchAI]);
 
   const getRiskFactors = (): string[] => {
     if (riskData?.primary_risk_factors && Array.isArray(riskData.primary_risk_factors)) {

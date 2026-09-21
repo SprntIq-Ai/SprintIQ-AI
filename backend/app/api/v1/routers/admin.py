@@ -72,7 +72,38 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: Profile = D
     avg_completion = (completed_tasks / max(total_tasks, 1)) * 100
     
     projects = db.query(Project).all()
-    avg_risk = sum(p.ai_risk_score for p in projects) / max(len(projects), 1) if projects else 15.4
+    if projects:
+        scored = [p.ai_risk_score for p in projects if p.ai_risk_score is not None]
+        avg_risk = sum(scored) / max(len(scored), 1) if scored else 0.0
+    else:
+        avg_risk = 0.0
+
+    healthy_count = sum(1 for p in projects if (p.health_status or "").upper() == "HEALTHY")
+    at_risk_count = sum(1 for p in projects if (p.health_status or "").upper() == "AT_RISK")
+    critical_count = sum(1 for p in projects if (p.health_status or "").upper() == "CRITICAL")
+
+    # Dynamic AI Governance Insight
+    if critical_count > 0:
+        insight_severity = "danger"
+        insight_title = "Critical Governance Alert"
+        insight_msg = f"{critical_count} project(s) are in critical status and require immediate managerial intervention."
+    elif at_risk_count > 0:
+        insight_severity = "warning"
+        insight_title = "Delivery Risk Warning"
+        insight_msg = f"{at_risk_count} project(s) are showing elevated risk signals with {delayed_tasks} delayed task(s)."
+    elif total_projects == 0:
+        insight_severity = "info"
+        insight_title = "Workspace Initialized"
+        insight_msg = "No projects currently configured. Create a project to enable engineering intelligence."
+    else:
+        insight_severity = "success"
+        insight_title = "Governance Stable"
+        insight_msg = f"Organization-wide engineering health is stable across all {total_projects} active project(s)."
+
+    insight_reason = (
+        f"{healthy_count} healthy · {at_risk_count} at risk · {critical_count} critical across {total_projects} project(s). "
+        f"Portfolio completion rate is {round(avg_completion, 1)}% with {pending_tasks} open task(s)."
+    )
 
     # Chart datasets
     project_status_chart = [
@@ -98,9 +129,10 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: Profile = D
         activity_items.append({
             "id": act.id,
             "user_name": user.full_name if user else "System",
+            "user_role": user.role.name.upper() if user and user.role else "SYSTEM",
             "action": act.action,
             "entity_type": act.entity_type,
-            "created_at": act.created_at
+            "created_at": act.created_at.isoformat() if act.created_at else None
         })
 
     return {
@@ -111,8 +143,17 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: Profile = D
             "completed_tasks": completed_tasks,
             "pending_tasks": pending_tasks,
             "delayed_tasks": delayed_tasks,
+            "healthy_projects": healthy_count,
+            "at_risk_projects": at_risk_count,
+            "critical_projects": critical_count,
             "project_completion_rate": round(avg_completion, 1),
             "ai_risk_score": round(avg_risk, 1)
+        },
+        "ai_governance_insight": {
+            "severity": insight_severity,
+            "title": insight_title,
+            "message": insight_msg,
+            "reason": insight_reason
         },
         "charts": {
             "project_status": project_status_chart,
@@ -454,19 +495,47 @@ def toggle_user_status(user_id: str, status_val: str = Query(...), db: Session =
     return {"message": f"User status updated to {user.status}"}
 
 @router.get("/activity-logs")
-def get_activity_logs(db: Session = Depends(get_db), current_user: Profile = Depends(admin_guard)):
-    logs = db.query(ActivityLog).order_by(ActivityLog.created_at.desc()).limit(100).all()
+def get_activity_logs(
+    q: Optional[str] = None,
+    action: Optional[str] = None,
+    limit: int = Query(100, ge=1, le=500),
+    skip: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+    current_user: Profile = Depends(admin_guard)
+):
+    query = db.query(ActivityLog)
+    if action:
+        query = query.filter(ActivityLog.action == action.upper())
+    
+    logs = query.order_by(ActivityLog.created_at.desc()).all()
     res = []
+    q_lower = q.lower() if q else None
     for l in logs:
         u = db.query(Profile).filter(Profile.id == l.user_id).first() if l.user_id else None
+        u_name = u.full_name if u else "System"
+        u_email = u.email if u else "N/A"
+        u_role = u.role.name.upper() if u and u.role else ("SYSTEM" if not u else "USER")
+
+        if q_lower:
+            match = (
+                q_lower in u_name.lower() or
+                q_lower in (l.action or "").lower() or
+                q_lower in (l.entity_type or "").lower() or
+                q_lower in u_email.lower()
+            )
+            if not match:
+                continue
+
         res.append({
             "id": l.id,
-            "user_name": u.full_name if u else "System",
-            "user_email": u.email if u else "N/A",
+            "user_name": u_name,
+            "user_email": u_email,
+            "user_role": u_role,
             "action": l.action,
             "entity_type": l.entity_type,
             "entity_id": l.entity_id,
             "details": l.details,
-            "created_at": l.created_at
+            "created_at": l.created_at.isoformat() if l.created_at else None
         })
-    return res
+    return res[skip : skip + limit]
+

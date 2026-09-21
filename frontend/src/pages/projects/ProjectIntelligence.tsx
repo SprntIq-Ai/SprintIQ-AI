@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { 
-  Activity, ShieldAlert, Cpu, Users, GitPullRequest, Rocket, Sliders, AlertTriangle, CheckCircle, ChevronRight, RefreshCw, Sparkles, Clock
+  Activity, ShieldAlert, Cpu, Users, GitPullRequest, Rocket, Sliders, AlertTriangle, CheckCircle, ChevronRight, RefreshCw, Sparkles, Clock, FolderKanban
 } from 'lucide-react';
 import { intelligenceService } from '../../services/intelligenceService';
+import { adminService, managerService, developerService } from '../../services/api';
 import { InitialsAvatar } from '../../components/common/InitialsAvatar';
 
 export const ProjectIntelligence: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const projectId = id || 'demo-project-id';
+  const [projectsList, setProjectsList] = useState<any[]>([]);
+  const [activeProjectId, setActiveProjectId] = useState<string>(id || '');
 
   const [loading, setLoading] = useState<boolean>(true);
   const [healthData, setHealthData] = useState<any>(null);
@@ -18,16 +20,40 @@ export const ProjectIntelligence: React.FC = () => {
   const [githubMetrics, setGithubMetrics] = useState<any>(null);
   const [releaseData, setReleaseData] = useState<any>(null);
 
-  const fetchData = async () => {
+  const fetchProjects = useCallback(async () => {
+    try {
+      let projs: any[] = [];
+      try {
+        projs = await adminService.getProjects();
+      } catch {
+        try {
+          projs = await managerService.getProjects();
+        } catch {
+          projs = (await developerService.getProjects()) as any[];
+        }
+      }
+      const list = Array.isArray(projs) ? projs : [];
+      setProjectsList(list);
+      if (!activeProjectId && list.length > 0) {
+        setActiveProjectId(list[0].id);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, [activeProjectId]);
+
+  const fetchData = useCallback(async (targetId?: string) => {
+    const pid = targetId || activeProjectId;
+    if (!pid) return;
     setLoading(true);
     try {
       const [h, ml, b, w, gh, rel] = await Promise.all([
-        intelligenceService.getHealthScore(projectId).catch(() => null),
-        intelligenceService.getMLProjectDelay(projectId).catch(() => null),
-        intelligenceService.getBottlenecks(projectId).catch(() => null),
-        intelligenceService.getWorkloadIntelligence(projectId).catch(() => null),
-        intelligenceService.getGitHubAnalytics(projectId).catch(() => null),
-        intelligenceService.getReleaseReadiness(projectId).catch(() => null)
+        intelligenceService.getHealthScore(pid).catch(() => null),
+        intelligenceService.getMLProjectDelay(pid).catch(() => null),
+        intelligenceService.getBottlenecks(pid).catch(() => null),
+        intelligenceService.getWorkloadIntelligence(pid).catch(() => null),
+        intelligenceService.getGitHubAnalytics(pid).catch(() => null),
+        intelligenceService.getReleaseReadiness(pid).catch(() => null)
       ]);
       setHealthData(h);
       setMlPrediction(ml);
@@ -40,13 +66,27 @@ export const ProjectIntelligence: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeProjectId]);
 
   useEffect(() => {
-    fetchData();
-  }, [projectId]);
+    fetchProjects();
+  }, [fetchProjects]);
 
-  if (loading) {
+  useEffect(() => {
+    if (activeProjectId) {
+      fetchData(activeProjectId);
+    }
+    const handleMutation = () => {
+      fetchProjects();
+      if (activeProjectId) fetchData(activeProjectId);
+    };
+    window.addEventListener('sprintiq:mutation', handleMutation);
+    return () => window.removeEventListener('sprintiq:mutation', handleMutation);
+  }, [activeProjectId, fetchData, fetchProjects]);
+
+  const projectId = activeProjectId || id || '';
+
+  if (loading && !healthData) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] text-slate-500">
         <RefreshCw className="w-8 h-8 animate-spin mb-3" style={{ color: 'var(--role-primary)' }} />
@@ -70,15 +110,28 @@ export const ProjectIntelligence: React.FC = () => {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          {projectsList.length > 0 && (
+            <div className="relative">
+              <select
+                value={activeProjectId}
+                onChange={(e) => setActiveProjectId(e.target.value)}
+                className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 text-xs font-semibold focus:outline-none focus:border-[var(--role-primary)] cursor-pointer"
+              >
+                {projectsList.map(p => (
+                  <option key={p.id} value={p.id}>{p.name} ({p.key})</option>
+                ))}
+              </select>
+            </div>
+          )}
           <button 
-            onClick={fetchData} 
-            className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-700 text-slate-700 rounded-xl text-sm font-medium transition"
+            onClick={() => fetchData()} 
+            className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-medium transition"
           >
             <RefreshCw className="w-4 h-4" /> Refresh Signals
           </button>
           <Link 
-            to={`/projects/${projectId}/simulator`}
+            to={`/projects/${projectId || 'current'}/simulator`}
             className="role-btn-primary flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition"
           >
             <Sliders className="w-4 h-4" /> What-If Simulator
