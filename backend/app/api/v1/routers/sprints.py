@@ -42,12 +42,12 @@ def _parse_date(d):
 
 def _enrich_sprint(sprint: Sprint, db: Session) -> dict:
     sprint_dict = {
-        "id": sprint.id,
-        "project_id": sprint.project_id,
+        "id": str(sprint.id),
+        "project_id": str(sprint.project_id) if sprint.project_id else None,
         "name": sprint.name,
         "goal": sprint.goal,
-        "start_date": sprint.start_date,
-        "end_date": sprint.end_date,
+        "start_date": _parse_date(sprint.start_date) or sprint.start_date,
+        "end_date": _parse_date(sprint.end_date) or sprint.end_date,
         "status": sprint.status,
         "created_at": sprint.created_at
     }

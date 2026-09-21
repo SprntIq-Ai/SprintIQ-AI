@@ -144,14 +144,14 @@ class SprintUpdate(BaseModel):
     status: Optional[str] = None
 
 class SprintResponse(BaseModel):
-    id: str
-    project_id: str
+    id: Union[str, Any]
+    project_id: Union[str, Any]
     name: str
-    goal: Optional[str]
-    start_date: date
-    end_date: date
+    goal: Optional[str] = None
+    start_date: Optional[Union[date, str]] = None
+    end_date: Optional[Union[date, str]] = None
     status: str
-    created_at: datetime
+    created_at: Optional[Union[datetime, str]] = None
     total_tasks: Optional[int] = 0
     completed_tasks: Optional[int] = 0
     rejected_tasks: Optional[int] = 0
@@ -184,8 +184,8 @@ class TaskUpdate(BaseModel):
     sprint_id: Optional[str] = None
     estimated_hours: Optional[float] = None
     story_points: Optional[int] = None
-    start_date: Optional[date] = None
-    due_date: Optional[date] = None
+    start_date: Optional[Union[date, str]] = None
+    due_date: Optional[Union[date, str]] = None
     assigned_developer_id: Optional[str] = None
 
 class TaskProgressUpdate(BaseModel):
@@ -224,30 +224,30 @@ class CommentResponse(BaseModel):
         from_attributes = True
 
 class TaskResponse(BaseModel):
-    id: str
+    id: Union[str, Any]
     title: str
-    description: Optional[str]
+    description: Optional[str] = None
     priority: str
     status: str
     progress: int
-    project_id: str
+    project_id: Union[str, Any]
     project_name: Optional[str] = None
-    sprint_id: Optional[str]
+    sprint_id: Optional[Union[str, Any]] = None
     sprint_name: Optional[str] = None
     estimated_hours: float
     story_points: int
-    start_date: Optional[date]
-    due_date: Optional[date]
-    assigned_developer_id: Optional[str]
+    start_date: Optional[Union[date, str]] = None
+    due_date: Optional[Union[date, str]] = None
+    assigned_developer_id: Optional[Union[str, Any]] = None
     assigned_developer_name: Optional[str] = None
     assigned_developer_avatar: Optional[str] = None
-    created_by: str
-    created_at: datetime
+    created_by: Union[str, Any]
+    created_at: Optional[Union[datetime, str]] = None
     attachments: List[TaskAttachmentResponse] = []
     comments_count: Optional[int] = 0
-    submitted_at: Optional[datetime] = None
-    reviewed_by: Optional[str] = None
-    reviewed_at: Optional[datetime] = None
+    submitted_at: Optional[Union[datetime, str]] = None
+    reviewed_by: Optional[Union[str, Any]] = None
+    reviewed_at: Optional[Union[datetime, str]] = None
     review_comment: Optional[str] = None
 
     class Config:

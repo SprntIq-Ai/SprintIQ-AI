@@ -67,37 +67,37 @@ def get_tasks(
 
         att_res = [
             TaskAttachmentResponse(
-                id=a.id, file_name=a.file_name, file_url=a.file_url, file_type=a.file_type, file_size=a.file_size, uploaded_at=a.uploaded_at
+                id=str(a.id), file_name=a.file_name, file_url=a.file_url, file_type=a.file_type, file_size=a.file_size, uploaded_at=a.uploaded_at
             ) for a in attachments
         ]
 
         res.append(TaskResponse(
-            id=t.id,
+            id=str(t.id),
             title=t.title,
             description=t.description,
             priority=t.priority,
             status=t.status,
             progress=t.progress,
-            project_id=t.project_id,
+            project_id=str(t.project_id),
             project_name=proj.name if proj else None,
-            sprint_id=t.sprint_id,
+            sprint_id=str(t.sprint_id) if t.sprint_id else None,
             sprint_name=sprint.name if sprint else None,
             estimated_hours=t.estimated_hours,
             story_points=t.story_points,
             start_date=t.start_date,
             due_date=t.due_date,
-            assigned_developer_id=t.assigned_developer_id,
+            assigned_developer_id=str(t.assigned_developer_id) if t.assigned_developer_id else None,
             assigned_developer_name=dev.full_name if dev else "Unassigned",
             assigned_developer_avatar=dev.avatar_url if dev else None,
-        created_by=t.created_by,
-        created_at=t.created_at,
-        attachments=att_res,
-        comments_count=comments_cnt,
-        submitted_at=t.submitted_at,
-        reviewed_by=t.reviewed_by,
-        reviewed_at=t.reviewed_at,
-        review_comment=t.review_comment
-    ))
+            created_by=str(t.created_by),
+            created_at=t.created_at,
+            attachments=att_res,
+            comments_count=comments_cnt,
+            submitted_at=t.submitted_at,
+            reviewed_by=str(t.reviewed_by) if t.reviewed_by else None,
+            reviewed_at=t.reviewed_at,
+            review_comment=t.review_comment
+        ))
     return res
 
 @router.post("", response_model=TaskResponse)
@@ -206,29 +206,29 @@ def create_task(req: TaskCreate, db: Session = Depends(get_db), current_user: Pr
     sprint = db.query(Sprint).filter(Sprint.id == task.sprint_id).first() if task.sprint_id else None
 
     return TaskResponse(
-        id=task.id,
+        id=str(task.id),
         title=task.title,
         description=task.description,
         priority=task.priority,
         status=task.status,
         progress=task.progress,
-        project_id=task.project_id,
+        project_id=str(task.project_id),
         project_name=project.name,
-        sprint_id=task.sprint_id,
+        sprint_id=str(task.sprint_id) if task.sprint_id else None,
         sprint_name=sprint.name if sprint else None,
         estimated_hours=task.estimated_hours,
         story_points=task.story_points,
         start_date=task.start_date,
         due_date=task.due_date,
-        assigned_developer_id=task.assigned_developer_id,
+        assigned_developer_id=str(task.assigned_developer_id) if task.assigned_developer_id else None,
         assigned_developer_name=assigned_dev.full_name if assigned_dev else None,
         assigned_developer_avatar=assigned_dev.avatar_url if assigned_dev else None,
-        created_by=task.created_by,
+        created_by=str(task.created_by),
         created_at=task.created_at,
         attachments=[],
         comments_count=0,
         submitted_at=task.submitted_at,
-        reviewed_by=task.reviewed_by,
+        reviewed_by=str(task.reviewed_by) if task.reviewed_by else None,
         reviewed_at=task.reviewed_at,
         review_comment=task.review_comment
     )
@@ -298,29 +298,38 @@ def update_task(task_id: str, req: TaskUpdate, db: Session = Depends(get_db), cu
     comments_cnt = db.query(Comment).filter(Comment.task_id == task.id).count()
 
     return TaskResponse(
-        id=task.id,
+        id=str(task.id),
         title=task.title,
         description=task.description,
         priority=task.priority,
         status=task.status,
         progress=task.progress,
-        project_id=task.project_id,
+        project_id=str(task.project_id),
         project_name=proj.name if proj else None,
-        sprint_id=task.sprint_id,
+        sprint_id=str(task.sprint_id) if task.sprint_id else None,
         sprint_name=sprint.name if sprint else None,
         estimated_hours=task.estimated_hours,
         story_points=task.story_points,
         start_date=task.start_date,
         due_date=task.due_date,
-        assigned_developer_id=task.assigned_developer_id,
+        assigned_developer_id=str(task.assigned_developer_id) if task.assigned_developer_id else None,
         assigned_developer_name=dev.full_name if dev else None,
         assigned_developer_avatar=dev.avatar_url if dev else None,
-        created_by=task.created_by,
+        created_by=str(task.created_by),
         created_at=task.created_at,
-        attachments=[TaskAttachmentResponse(id=a.id, file_name=a.file_name, file_url=a.file_url, file_type=a.file_type, file_size=a.file_size, uploaded_at=a.uploaded_at) for a in attachments],
+        attachments=[
+            TaskAttachmentResponse(
+                id=str(a.id),
+                file_name=a.file_name,
+                file_url=a.file_url,
+                file_type=a.file_type,
+                file_size=a.file_size,
+                uploaded_at=a.uploaded_at
+            ) for a in attachments
+        ],
         comments_count=comments_cnt,
         submitted_at=task.submitted_at,
-        reviewed_by=task.reviewed_by,
+        reviewed_by=str(task.reviewed_by) if task.reviewed_by else None,
         reviewed_at=task.reviewed_at,
         review_comment=task.review_comment
     )

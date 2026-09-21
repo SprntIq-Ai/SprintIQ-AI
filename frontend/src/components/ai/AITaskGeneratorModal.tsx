@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { Sparkles, CheckCircle2, Clock, AlertCircle, Loader2 } from 'lucide-react';
-import { aiService, taskService, projectService, managerService } from '../../services/api';
+import { aiService, taskService, projectService, managerService, sprintService } from '../../services/api';
 import { AITaskDetails } from '../../types';
 import { formatApiErrorMessage } from '../../utils/apiErrors';
 
@@ -21,7 +21,10 @@ export const AITaskGeneratorModal: React.FC<AITaskGeneratorModalProps> = ({
 }) => {
   const [title, setTitle] = useState('');
   const [targetProjectId, setTargetProjectId] = useState<string>(projectId || '');
+  const [targetSprintId, setTargetSprintId] = useState<string>('');
   const [projectList, setProjectList] = useState<any[]>([]);
+  const [sprintList, setSprintList] = useState<any[]>([]);
+  const [loadingSprints, setLoadingSprints] = useState<boolean>(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [aiDetails, setAiDetails] = useState<AITaskDetails | null>(null);
@@ -52,6 +55,35 @@ export const AITaskGeneratorModal: React.FC<AITaskGeneratorModalProps> = ({
       loadProjs();
     }
   }, [isOpen, projectId]);
+
+  // Whenever targetProjectId changes, fetch sprints scoped specifically to that project
+  useEffect(() => {
+    if (!targetProjectId) {
+      setSprintList([]);
+      setTargetSprintId('');
+      return;
+    }
+    let isMounted = true;
+    setLoadingSprints(true);
+    setTargetSprintId(''); // Reset sprint to No Sprint (Backlog) whenever project changes
+    sprintService.getAll(targetProjectId)
+      .then((sps) => {
+        if (isMounted) {
+          setSprintList(sps || []);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load sprints for project", err);
+        if (isMounted) setSprintList([]);
+      })
+      .finally(() => {
+        if (isMounted) setLoadingSprints(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [targetProjectId]);
 
   const resolveProjectId = (): string | null => {
     if (targetProjectId && targetProjectId !== 'default' && targetProjectId.trim() !== '') {
@@ -105,11 +137,12 @@ export const AITaskGeneratorModal: React.FC<AITaskGeneratorModalProps> = ({
         description: desc,
         priority: aiDetails.priority || 'MEDIUM',
         project_id: pid,
+        sprint_id: targetSprintId && targetSprintId.trim() !== '' ? targetSprintId : undefined,
         estimated_hours: Number(aiDetails.estimated_hours) || 8.0,
         story_points: Number(aiDetails.story_points) || 3,
-        use_active_sprint: true
+        use_active_sprint: false
       });
-      setSuccess('AI task added to backlog successfully.');
+      setSuccess(targetSprintId ? 'AI task assigned to sprint successfully.' : 'AI task added to backlog successfully.');
       setTitle('');
       setAiDetails(null);
       setTimeout(() => {
@@ -128,20 +161,39 @@ export const AITaskGeneratorModal: React.FC<AITaskGeneratorModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} title="AI Task Generator (Gemini Powered)" maxWidth="max-w-2xl">
       <div className="space-y-5">
         <form onSubmit={handleGenerate} className="space-y-3">
-          {projectList.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {projectList.length > 0 && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Target Project</label>
+                <select
+                  value={targetProjectId}
+                  onChange={(e) => setTargetProjectId(e.target.value)}
+                  className="w-full px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 text-xs focus:outline-none focus:border-[var(--role-ai)]"
+                >
+                  {projectList.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name} ({p.key || 'PROJ'})</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Target Project</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Assign Sprint</label>
               <select
-                value={targetProjectId}
-                onChange={(e) => setTargetProjectId(e.target.value)}
-                className="w-full px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 text-xs focus:outline-none focus:border-[var(--role-ai)]"
+                value={targetSprintId}
+                onChange={(e) => setTargetSprintId(e.target.value)}
+                disabled={loadingSprints}
+                className="w-full px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 text-xs focus:outline-none focus:border-[var(--role-ai)] disabled:opacity-60"
               >
-                {projectList.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name} ({p.key || 'PROJ'})</option>
+                <option value="">No Sprint (Backlog)</option>
+                {sprintList.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.status || 'PLANNED'})
+                  </option>
                 ))}
               </select>
             </div>
-          )}
+          </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-600 mb-1">Enter Feature or Bug Task Title</label>
@@ -209,7 +261,7 @@ export const AITaskGeneratorModal: React.FC<AITaskGeneratorModalProps> = ({
 
             <div className="flex justify-end pt-2 border-t border-slate-200">
               <Button variant="ai" onClick={handleCreateTask} isLoading={isSaving} icon={<CheckCircle2 className="w-4 h-4" />}>
-                Save AI Task to Backlog
+                {targetSprintId ? 'Save AI Task to Sprint' : 'Save AI Task to Backlog'}
               </Button>
             </div>
           </div>
